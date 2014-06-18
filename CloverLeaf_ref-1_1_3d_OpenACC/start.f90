@@ -21,6 +21,7 @@
 !>  allocates the communication buffers and call the chunk initialisation and
 !>  generation routines. It calls the equation of state to calculate initial
 !>  pressure before priming the halo cells and writing an initial field summary.
+!test
 SUBROUTINE start
 
   USE clover_module

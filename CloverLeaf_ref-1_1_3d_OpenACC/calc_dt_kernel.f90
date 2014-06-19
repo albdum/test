@@ -92,14 +92,21 @@ SUBROUTINE calc_dt_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
   REAL(KIND=8)     :: div,dsx,dsy,dsz,dtut,dtvt,dtwt,dtct,dtdivt,cc,dv1,dv2,jkl_control
 
   small=0
+
+!$ACC DATA &
+!$ACC COPY(celldx,celldy,cellx,celly,density0,soundspeed,viscosity_a,volume) &
+!$ACC COPY(xarea,xvel0,yarea,yvel0,dt_min) &
+!$ACC COPYIN(g_small)
+
   dt_min_val = g_big
   jkl_control=1.1
 
-!$OMP PARALLEL
-
-!$OMP DO PRIVATE(dsx,dsy,dsz,cc,dv1,dv2,div,dtct,dtut,dtvt,dtwt,dtdivt)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min,z_max
+!$ACC LOOP INDEPENDENT
     DO k=y_min,y_max
+!$ACC LOOP INDEPENDENT PRIVATE(dsx,dsy,dsz,cc,dv1,dv2,div,dtct,dtut,dtvt,dtwt,dtdivt)
       DO j=x_min,x_max
 
         dsx=celldx(j)
@@ -148,19 +155,20 @@ SUBROUTINE calc_dt_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
       ENDDO
     ENDDO
   ENDDO
-!$OMP END DO
 
-!$OMP DO REDUCTION(MIN : dt_min_val)
+!!$ACC LOOP INDEPENDENT REDUCTION(min:dt_min_val) GANG(128)
   DO l=z_min,z_max
+!$ACC LOOP INDEPENDENT REDUCTION(min:dt_min_val)
     DO k=y_min,y_max
+!$ACC LOOP INDEPENDENT REDUCTION(min:dt_min_val)
       DO j=x_min,x_max
         IF(dt_min(j,k,l).LT.dt_min_val) dt_min_val=dt_min(j,k,l)
       ENDDO
     ENDDO
   ENDDO
-!$OMP END DO
 
-!$OMP END PARALLEL
+!$ACC END KERNELS
+!$ACC END DATA
 
   ! Extract the mimimum timestep information
   dtl_control=10.01*(jkl_control-INT(jkl_control))

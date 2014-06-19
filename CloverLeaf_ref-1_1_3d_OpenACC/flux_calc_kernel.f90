@@ -52,11 +52,15 @@ SUBROUTINE flux_calc_kernel(x_min,x_max,y_min,y_max,z_min,z_max,dt, &
 
   INTEGER :: j,k,l
 
-!$OMP PARALLEL
+!$ACC DATA &
+!$ACC COPY(xvel0,yvel0,zvel0,xvel1,yvel1,zvel1,xarea,yarea,zarea,vol_flux_x,vol_flux_y,vol_flux_z)
 
-!$OMP DO
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min,z_max
+!$ACC LOOP INDEPENDENT
     DO k=y_min,y_max
+!$ACC LOOP INDEPENDENT
       DO j=x_min,x_max+1 
         vol_flux_x(j,k,l)=0.125_8*dt*xarea(j,k,l)                  &
                          *(xvel0(j,k,l)+xvel0(j,k+1,l)+xvel0(j,k,l+1)+xvel0(j,k+1,l+1) &
@@ -64,11 +68,14 @@ SUBROUTINE flux_calc_kernel(x_min,x_max,y_min,y_max,z_min,z_max,dt, &
       ENDDO
     ENDDO
   ENDDO
-!$OMP END DO
+!$ACC END KERNELS
 
-!$OMP DO
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min,z_max
+!$ACC LOOP INDEPENDENT
     DO k=y_min,y_max+1
+!$ACC LOOP INDEPENDENT
       DO j=x_min,x_max
         vol_flux_y(j,k,l)=0.125_8*dt*yarea(j,k,l)                  &
                          *(yvel0(j,k,l)+yvel0(j+1,k,l)+yvel0(j,k,l+1)+yvel0(j+1,k,l+1) &
@@ -76,11 +83,14 @@ SUBROUTINE flux_calc_kernel(x_min,x_max,y_min,y_max,z_min,z_max,dt, &
       ENDDO
     ENDDO
   ENDDO
-!$OMP END DO
+!$ACC END KERNELS
 
-!$OMP DO
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min,z_max+1
+!$ACC LOOP INDEPENDENT
     DO k=y_min,y_max
+!$ACC LOOP INDEPENDENT
       DO j=x_min,x_max
         vol_flux_z(j,k,l)=0.125_8*dt*zarea(j,k,l)                  &
                          *(zvel0(j,k,l)+zvel0(j+1,k,l)+zvel0(j+1,k,l)+zvel0(j+1,k+1,l) &
@@ -88,10 +98,9 @@ SUBROUTINE flux_calc_kernel(x_min,x_max,y_min,y_max,z_min,z_max,dt, &
       ENDDO
     ENDDO
   ENDDO
-!$OMP END DO
+!$ACC END KERNELS
 
-!$OMP END PARALLEL
-
+!$ACC END DATA
 END SUBROUTINE flux_calc_kernel
 
 END MODULE flux_calc_kernel_module

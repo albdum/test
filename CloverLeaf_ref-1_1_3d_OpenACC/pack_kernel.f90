@@ -34,7 +34,7 @@ SUBROUTINE clover_pack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,  
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: left_snd_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -70,16 +70,23 @@ SUBROUTINE clover_pack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,  
     z_inc=1
   ENDIF
 
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC DATA &
+!$ACC COPY(left_snd_buffer,field)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         left_snd_buffer(index)=field(x_min+x_inc-1+j,k,l)
       ENDDO
     ENDDO
   ENDDO
-!$OMP END PARALLEL DO
+!$ACC END KERNELS
+!$ACC UPDATE HOST (left_snd_buffer(1:index))
+!$ACC END DATA
 
 END SUBROUTINE clover_pack_message_left
 
@@ -91,7 +98,7 @@ SUBROUTINE clover_unpack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: left_rcv_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -127,16 +134,23 @@ SUBROUTINE clover_unpack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,
     z_inc=1
   ENDIF
 
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC DATA &
+!$ACC COPY(left_rcv_buffer,field)
+!$ACC UPDATE DEVICE (left_rcv_buffer(1:index))
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         field(x_min-j,k,l)=left_rcv_buffer(index)
       ENDDO
     ENDDO
   ENDDO
-!$OMP END PARALLEL DO
+!$ACC END KERNELS
+!$ACC END DATA
 
 END SUBROUTINE clover_unpack_message_left
 
@@ -148,7 +162,7 @@ SUBROUTINE clover_pack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field, 
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: right_snd_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -184,16 +198,23 @@ SUBROUTINE clover_pack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field, 
     z_inc=1
   ENDIF
 
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC DATA &
+!$ACC COPY(right_snd_buffer,field)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         right_snd_buffer(index)=field(x_max+1-j,k,l)
       ENDDO
     ENDDO
   ENDDO
-!$OMP END PARALLEL DO
+!$ACC END KERNELS
+!$ACC UPDATE HOST (right_snd_buffer(1:index))
+!$ACC END DATA
 
 END SUBROUTINE clover_pack_message_right
 
@@ -205,7 +226,7 @@ SUBROUTINE clover_unpack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: right_rcv_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -241,16 +262,24 @@ SUBROUTINE clover_unpack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field
     z_inc=1
   ENDIF
 
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC DATA &
+!$ACC COPY(right_rcv_buffer,field)
+!$ACC UPDATE DEVICE (right_rcv_buffer(1:index))
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         field(x_max+x_inc+j,k,l)=right_rcv_buffer(index)
       ENDDO
     ENDDO
   ENDDO
-!$OMP END PARALLEL DO
+!$ACC END KERNELS
+!$ACC END DATA
+
 
 END SUBROUTINE clover_unpack_message_right
 
@@ -262,7 +291,7 @@ SUBROUTINE clover_pack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field,   
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: top_snd_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -298,16 +327,24 @@ SUBROUTINE clover_pack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field,   
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(top_snd_buffer,field)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO k=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         top_snd_buffer(index)=field(j,y_max+1-k,l)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC UPDATE HOST (top_snd_buffer(1:index))
+!$ACC END DATA
+
 
 END SUBROUTINE clover_pack_message_top
 
@@ -319,7 +356,7 @@ SUBROUTINE clover_unpack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field, 
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: top_rcv_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -355,16 +392,23 @@ SUBROUTINE clover_unpack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field, 
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(top_rcv_buffer,field)
+!$ACC UPDATE DEVICE (top_rcv_buffer(1:index))
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO k=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         field(j,y_max+y_inc+k,l)=top_rcv_buffer(index)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC END DATA
 
 END SUBROUTINE clover_unpack_message_top
 
@@ -376,7 +420,7 @@ SUBROUTINE clover_pack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,field,
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: bottom_snd_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -412,16 +456,23 @@ SUBROUTINE clover_pack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,field,
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(bottom_snd_buffer,field)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO k=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         bottom_snd_buffer(index)=field(j,y_min+y_inc-1+k,l)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC UPDATE HOST (bottom_snd_buffer(1:index))
+!$ACC END DATA
 
 END SUBROUTINE clover_pack_message_bottom
 
@@ -433,7 +484,7 @@ SUBROUTINE clover_unpack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,fiel
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: bottom_rcv_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -469,16 +520,23 @@ SUBROUTINE clover_unpack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,fiel
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(bottom_rcv_buffer,field)
+!$ACC UPDATE DEVICE (bottom_rcv_buffer(1:index))
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO k=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         field(j,y_min-k,l)=bottom_rcv_buffer(index)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC END DATA
 
 END SUBROUTINE clover_unpack_message_bottom
 
@@ -490,7 +548,7 @@ SUBROUTINE clover_pack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,  
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: back_snd_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -526,16 +584,23 @@ SUBROUTINE clover_pack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,  
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(back_snd_buffer,field)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         back_snd_buffer(index)=field(j,k,z_min+z_inc-1+l)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC UPDATE HOST (back_snd_buffer(1:index))
+!$ACC END DATA
 
 END SUBROUTINE clover_pack_message_back
 
@@ -547,7 +612,7 @@ SUBROUTINE clover_unpack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: back_rcv_buffer(:)
 
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
@@ -583,16 +648,23 @@ SUBROUTINE clover_unpack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(back_rcv_buffer,field)
+!$ACC UPDATE DEVICE (back_rcv_buffer(1:index))
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         field(j,k,z_min-l)=back_rcv_buffer(index)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC END DATA
 
 END SUBROUTINE clover_unpack_message_back
 
@@ -604,7 +676,7 @@ SUBROUTINE clover_pack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field, 
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: front_snd_buffer(:)
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
@@ -639,16 +711,23 @@ SUBROUTINE clover_pack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field, 
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(front_snd_buffer,field)
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         front_snd_buffer(index)=field(j,k,z_max+1-l)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC UPDATE HOST (front_snd_buffer(1:index))
+!$ACC END DATA
 
 END SUBROUTINE clover_pack_message_front
 
@@ -660,7 +739,7 @@ SUBROUTINE clover_unpack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field
 
   IMPLICIT NONE
 
-  REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+  REAL(KIND=8) :: field(-1:index,-1:index,-1:index) ! This seems to work for any type of mesh data
   REAL(KIND=8) :: front_rcv_buffer(:)
   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
@@ -695,16 +774,23 @@ SUBROUTINE clover_unpack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field
     z_inc=1
   ENDIF
 
+!$ACC DATA &
+!$ACC COPY(front_rcv_buffer,field)
+!$ACC UPDATE DEVICE (front_rcv_buffer(1:index))
+!$ACC KERNELS
+!$ACC LOOP INDEPENDENT
   DO l=1,depth
-!$OMP PARALLEL DO PRIVATE(index)
+!$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
+!$ACC LOOP INDEPENDENT PRIVATE(index)
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + ((l-1)*(x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         field(j,k,z_max+z_inc+l)=front_rcv_buffer(index)
       ENDDO
     ENDDO
-!$OMP END PARALLEL DO
   ENDDO
+!$ACC END KERNELS
+!$ACC END DATA
 
 END SUBROUTINE clover_unpack_message_front
 

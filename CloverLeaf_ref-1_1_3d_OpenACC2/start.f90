@@ -280,60 +280,62 @@ SUBROUTINE start
       CALL clover_allocate_buffers(c)
     ENDIF
   ENDDO
-
- CALL generate_on_device( chunks(parallel%task)%field%x_min, &
-                          chunks(parallel%task)%field%x_max, &
-                          chunks(parallel%task)%field%y_min, &
-                          chunks(parallel%task)%field%y_max, &
-                          chunks(parallel%task)%field%z_min, &
-                          chunks(parallel%task)%field%z_max, &
-                          chunks(parallel%task)%field%density0, &
-                          chunks(parallel%task)%field%density1, &
-                          chunks(parallel%task)%field%energy0, &
-                          chunks(parallel%task)%field%energy1, &
-                          chunks(parallel%task)%field%pressure, &
-                          chunks(parallel%task)%field%soundspeed, &
-                          chunks(parallel%task)%field%viscosity, &
-                          chunks(parallel%task)%field%xvel0, &
-                          chunks(parallel%task)%field%yvel0, &
-                          chunks(parallel%task)%field%zvel0, &
-                          chunks(parallel%task)%field%xvel1, &
-                          chunks(parallel%task)%field%yvel1, &
-                          chunks(parallel%task)%field%zvel1, &
-                          chunks(parallel%task)%field%vol_flux_x, &
-                          chunks(parallel%task)%field%vol_flux_y, &
-                          chunks(parallel%task)%field%vol_flux_z, &
-                          chunks(parallel%task)%field%mass_flux_x, &
-                          chunks(parallel%task)%field%mass_flux_y, &
-                          chunks(parallel%task)%field%mass_flux_z, &
-                          chunks(parallel%task)%field%volume, &
-                          chunks(parallel%task)%field%cellx, &
-                          chunks(parallel%task)%field%celly, &
-                          chunks(parallel%task)%field%cellz, &
-                          chunks(parallel%task)%field%celldx, &
-                          chunks(parallel%task)%field%celldy, &
-                          chunks(parallel%task)%field%celldz, &
-                          chunks(parallel%task)%field%vertexx, &
-                          chunks(parallel%task)%field%vertexdx, &
-                          chunks(parallel%task)%field%vertexy, &
-                          chunks(parallel%task)%field%vertexdy, &
-                          chunks(parallel%task)%field%vertexz, &
-                          chunks(parallel%task)%field%vertexdz, &
-                          chunks(parallel%task)%field%xarea, &
-                          chunks(parallel%task)%field%yarea, &
-                          chunks(parallel%task)%field%zarea, &
-                          chunks(parallel%task)%left_snd_buffer, &
-                          chunks(parallel%task)%left_rcv_buffer, &
-                          chunks(parallel%task)%right_snd_buffer, &
-                          chunks(parallel%task)%right_rcv_buffer, &
-                          chunks(parallel%task)%bottom_snd_buffer, &
-                          chunks(parallel%task)%bottom_rcv_buffer, &
-                          chunks(parallel%task)%top_snd_buffer, &
-                          chunks(parallel%task)%top_rcv_buffer, &
-                          chunks(parallel%task)%back_snd_buffer, &
-                          chunks(parallel%task)%back_rcv_buffer, &
-                          chunks(parallel%task)%front_snd_buffer, &
-                          chunks(parallel%task)%front_rcv_buffer)
+print *, "xmin=", chunks(parallel%task+1)%field%x_min
+print *, "xmax=", chunks(parallel%task+1)%field%x_max
+ CALL generate_on_device( chunks(parallel%task+1)%field%x_min, &
+                          chunks(parallel%task+1)%field%x_max, &
+                          chunks(parallel%task+1)%field%y_min, &
+                          chunks(parallel%task+1)%field%y_max, &
+                          chunks(parallel%task+1)%field%z_min, &
+                          chunks(parallel%task+1)%field%z_max, &
+                          chunks(parallel%task+1)%field%density0, &
+                          chunks(parallel%task+1)%field%density1, &
+                          chunks(parallel%task+1)%field%energy0, &
+                          chunks(parallel%task+1)%field%energy1, &
+                          chunks(parallel%task+1)%field%pressure, &
+                          chunks(parallel%task+1)%field%soundspeed, &
+                          chunks(parallel%task+1)%field%viscosity, &
+                          chunks(parallel%task+1)%field%xvel0, &
+                          chunks(parallel%task+1)%field%yvel0, &
+                          chunks(parallel%task+1)%field%zvel0, &
+                          chunks(parallel%task+1)%field%xvel1, &
+                          chunks(parallel%task+1)%field%yvel1, &
+                          chunks(parallel%task+1)%field%zvel1, &
+                          chunks(parallel%task+1)%field%vol_flux_x, &
+                          chunks(parallel%task+1)%field%vol_flux_y, &
+                          chunks(parallel%task+1)%field%vol_flux_z, &
+                          chunks(parallel%task+1)%field%mass_flux_x, &
+                          chunks(parallel%task+1)%field%mass_flux_y, &
+                          chunks(parallel%task+1)%field%mass_flux_z, &
+                          chunks(parallel%task+1)%field%volume, &
+                          chunks(parallel%task+1)%field%cellx, &
+                          chunks(parallel%task+1)%field%celly, &
+                          chunks(parallel%task+1)%field%cellz, &
+                          chunks(parallel%task+1)%field%celldx, &
+                          chunks(parallel%task+1)%field%celldy, &
+                          chunks(parallel%task+1)%field%celldz, &
+                          chunks(parallel%task+1)%field%vertexx, &
+                          chunks(parallel%task+1)%field%vertexdx, &
+                          chunks(parallel%task+1)%field%vertexy, &
+                          chunks(parallel%task+1)%field%vertexdy, &
+                          chunks(parallel%task+1)%field%vertexz, &
+                          chunks(parallel%task+1)%field%vertexdz, &
+                          chunks(parallel%task+1)%field%xarea, &
+                          chunks(parallel%task+1)%field%yarea, &
+                          chunks(parallel%task+1)%field%zarea, &
+                          chunks(parallel%task+1)%left_snd_buffer, &
+                          chunks(parallel%task+1)%left_rcv_buffer, &
+                          chunks(parallel%task+1)%right_snd_buffer, &
+                          chunks(parallel%task+1)%right_rcv_buffer, &
+                          chunks(parallel%task+1)%bottom_snd_buffer, &
+                          chunks(parallel%task+1)%bottom_rcv_buffer, &
+                          chunks(parallel%task+1)%top_snd_buffer, &
+                          chunks(parallel%task+1)%top_rcv_buffer, &
+                          chunks(parallel%task+1)%back_snd_buffer, &
+                          chunks(parallel%task+1)%back_rcv_buffer, &
+                          chunks(parallel%task+1)%front_snd_buffer, &
+                          chunks(parallel%task+1)%front_rcv_buffer)
 
 END SUBROUTINE start
+
 

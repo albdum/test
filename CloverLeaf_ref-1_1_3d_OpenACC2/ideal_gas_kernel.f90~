@@ -44,7 +44,7 @@ SUBROUTINE ideal_gas_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
 
 !$ACC DATA &
 !$ACC COPY(energy,pressure,soundspeed)&
-!$ACC COPY_OR_PRESENT(density)
+!$ACC PRESENT_OR_COPY(density)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min,z_max

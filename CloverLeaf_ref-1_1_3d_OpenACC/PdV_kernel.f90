@@ -68,11 +68,11 @@ LOGICAL :: predict
       REAL(KIND=8) :: right_flux,left_flux,top_flux,bottom_flux,back_flux,front_flux,total_flux
      
     !$ACC DATA &
-    !$ACC COPY(density0,energy0,pressure,viscosity,volume,xarea,zarea) &
-    !$ACC COPY(xvel0,yarea,yvel0,zvel0) &
-    !$ACC COPY(density1,energy1) &
-    !$ACC COPY(xvel1,yvel1,zvel1) &
-    !$ACC COPY(volume_change)
+    !$ACC PCOPY(density0,energy0,pressure,viscosity,volume,xarea,zarea) &
+    !$ACC PCOPY(xvel0,yarea,yvel0,zvel0) &
+    !$ACC PCOPY(density1,energy1) &
+    !$ACC PCOPY(xvel1,yvel1,zvel1) &
+    !$ACC PCOPY(volume_change)
      
       IF(predict)THEN
      

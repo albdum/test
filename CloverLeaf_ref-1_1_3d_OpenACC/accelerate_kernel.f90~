@@ -58,9 +58,9 @@ SUBROUTINE accelerate_kernel(x_min,x_max,y_min,y_max,z_min,z_max,dt,     &
   REAL(KIND=8)          :: nodal_mass
 
 !$ACC DATA &
-!$ACC PCOPY(density0,volume,pressure,viscosity,xarea,yarea,xvel0,yvel0)&
-!$ACC PCOPY(xvel1,yvel1,zvel1,zvel0,zarea) &
-!$ACC PCOPY(stepbymass)
+!$ACC COPY(density0,volume,pressure,viscosity,xarea,yarea,xvel0,yvel0)&
+!$ACC COPY(xvel1,yvel1,zvel1,zvel0,zarea) &
+!$ACC COPY(stepbymass)
 
 !$ACC KERNELS
 

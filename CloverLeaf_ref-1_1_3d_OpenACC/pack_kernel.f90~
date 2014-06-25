@@ -72,7 +72,7 @@ SUBROUTINE clover_pack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,  
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(left_snd_buffer)
+!$ACC PRESENT(left_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
@@ -137,7 +137,7 @@ SUBROUTINE clover_unpack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(left_rcv_buffer)
+!$ACC PRESENT(left_rcv_buffer)
 !$ACC UPDATE DEVICE (left_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
@@ -202,7 +202,7 @@ SUBROUTINE clover_pack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field, 
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(right_snd_buffer)
+!$ACC PRESENT(right_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
@@ -267,7 +267,7 @@ SUBROUTINE clover_unpack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(right_rcv_buffer)
+!$ACC PRESENT(right_rcv_buffer)
 !$ACC UPDATE DEVICE (right_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
@@ -333,7 +333,7 @@ SUBROUTINE clover_pack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field,   
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(top_snd_buffer)
+!$ACC PRESENT(top_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO k=1,depth
@@ -399,7 +399,7 @@ SUBROUTINE clover_unpack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field, 
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(top_rcv_buffer)
+!$ACC PRESENT(top_rcv_buffer)
 !$ACC UPDATE DEVICE (top_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
@@ -464,7 +464,7 @@ SUBROUTINE clover_pack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,field,
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(bottom_snd_buffer)
+!$ACC PRESENT(bottom_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO k=1,depth
@@ -529,7 +529,7 @@ SUBROUTINE clover_unpack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,fiel
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(bottom_rcv_buffer)
+!$ACC PRESENT(bottom_rcv_buffer)
 !$ACC UPDATE DEVICE (bottom_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
@@ -594,7 +594,7 @@ SUBROUTINE clover_pack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,  
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(back_snd_buffer)
+!$ACC PRESENT(back_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=1,depth
@@ -659,7 +659,7 @@ SUBROUTINE clover_unpack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(back_rcv_buffer)
+!$ACC PRESENT(back_rcv_buffer)
 !$ACC UPDATE DEVICE (back_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
@@ -723,7 +723,7 @@ SUBROUTINE clover_pack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field, 
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(front_snd_buffer)
+!$ACC PRESENT(front_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=1,depth
@@ -787,7 +787,7 @@ SUBROUTINE clover_unpack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field
 
 !$ACC DATA &
 !$ACC COPY(field)&
-!$ACC COPY(front_rcv_buffer)
+!$ACC PRESENT(front_rcv_buffer)
 !$ACC UPDATE DEVICE (front_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT

@@ -38,36 +38,29 @@ SUBROUTINE revert_kernel(x_min,x_max,y_min,y_max,z_min,z_max,density0,density1,e
 
   INTEGER :: j,k,l
 
-!$ACC DATA &
-!$ACC PCOPY(density0,density1,energy0,energy1)
+!$OMP PARALLEL
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO l=z_min,z_max
-!$ACC LOOP INDEPENDENT
     DO k=y_min,y_max
-!$ACC LOOP INDEPENDENT
       DO j=x_min,x_max
         density1(j,k,l)=density0(j,k,l)
       ENDDO
     ENDDO
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO l=z_min,z_max
-!$ACC LOOP INDEPENDENT
     DO k=y_min,y_max
-!$ACC LOOP INDEPENDENT
       DO j=x_min,x_max
         energy1(j,k,l)=energy0(j,k,l)
       ENDDO
     ENDDO
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC END DATA
+!$OMP END PARALLEL
 
 END SUBROUTINE revert_kernel
 

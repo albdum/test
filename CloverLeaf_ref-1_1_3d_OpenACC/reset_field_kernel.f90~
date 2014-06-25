@@ -47,7 +47,7 @@ SUBROUTINE reset_field_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
   INTEGER :: j,k,l
 
 !$ACC DATA &
-!$ACC PCOPY(density0,energy0,density1,energy1,xvel0,yvel0,zvel0,xvel1,yvel1,zvel1)
+!$ACC PCOPY(density0,energy0,density1,energy1,xvel0,yvel0,xvel1,yvel1)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min,z_max

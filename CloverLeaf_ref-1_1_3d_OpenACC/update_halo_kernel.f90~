@@ -98,7 +98,7 @@ CONTAINS
   INTEGER :: j,k,l
 
 !$ACC DATA &
-!$ACC PCOPY(density0,energy0,pressure,viscosity,soundspeed,density1,energy1,xvel0,zvel0,yvel0,xvel1,yvel1,zvel1,vol_flux_x,mass_flux_x,vol_flux_y,mass_flux_y,vol_flux_z,mass_flux_z)
+!$ACC PCOPY(density0,energy0,pressure,viscosity,soundspeed,density1,energy1,xvel0,yvel0,xvel1,yvel1,vol_flux_x,mass_flux_x,vol_flux_y,mass_flux_y)
 
   ! Update values in external halo cells based on depth and fields requested
   ! Even though half of these loops look the wrong way around, it should be noted

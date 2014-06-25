@@ -58,7 +58,7 @@ SUBROUTINE viscosity_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
                   ,ygrad,pgrad,xgrad,zgrad,div,strain2,limiter
 
 !$ACC DATA &
-!$ACC PCOPY(celldx,celldy,celldz,density0,pressure,xvel0,yvel0,zvel0,viscosity)
+!$ACC PRESENT(celldx,celldy,celldz,density0,pressure,xvel0,yvel0,zvel0,viscosity)
 
 
 !$ACC KERNELS

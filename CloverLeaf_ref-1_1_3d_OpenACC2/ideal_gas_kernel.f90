@@ -43,8 +43,7 @@ SUBROUTINE ideal_gas_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
   REAL(KIND=8) :: sound_speed_squared,v,pressurebyenergy,pressurebyvolume
 
 !$ACC DATA &
-!$ACC COPY(energy,pressure,soundspeed)&
-!$ACC PRESENT(density)
+!$ACC PCOPY(density,energy,pressure,soundspeed)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min,z_max

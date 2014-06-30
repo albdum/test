@@ -91,10 +91,10 @@ SUBROUTINE advec_cell_kernel(x_min,       &
   REAL(KIND=8) :: one_by_six=1.0_8/6.0_8
 
 !$ACC DATA &
-!$ACC PCOPY(density1,energy1) &
-!$ACC PCOPY(vol_flux_x,vol_flux_y,volume,mass_flux_x,mass_flux_y,vertexdx,vertexdy) &
-!$ACC PCOPY(pre_vol,post_vol,post_ener,pre_mass,post_mass,advec_vol,ener_flux)&
-!$ACC PCOPY(vol_flux_z,mass_flux_z,vertexdz)
+!$ACC PRESENT(density1,energy1) &
+!$ACC PRESENT(vol_flux_x,vol_flux_y,volume,mass_flux_x,mass_flux_y,vertexdx,vertexdy) &
+!$ACC PRESENT(pre_vol,post_vol,post_ener,pre_mass,post_mass,advec_vol,ener_flux)&
+!$ACC PRESENT(vol_flux_z,mass_flux_z,vertexdz)
 
 !$ACC KERNELS
   IF(dir.EQ.g_xdir) THEN

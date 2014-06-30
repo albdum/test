@@ -94,8 +94,8 @@ SUBROUTINE calc_dt_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
   small=0
 
 !$ACC DATA &
-!$ACC PCOPY(celldx,celldy,celldz,cellx,celly,cellz,density0,soundspeed,viscosity_a,volume) &
-!$ACC PCOPY(xarea,xvel0,yarea,yvel0,zarea,zvel0,dt_min) &
+!$ACC PRESENT(celldx,celldy,celldz,cellx,celly,cellz,density0,soundspeed,viscosity_a,volume) &
+!$ACC PRESENT(xarea,xvel0,yarea,yvel0,zarea,zvel0,dt_min) &
 !$ACC COPYIN(g_small)
 
 
@@ -157,11 +157,11 @@ SUBROUTINE calc_dt_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
     ENDDO
   ENDDO
 
-!!$ACC LOOP INDEPENDENT REDUCTION(min:dt_min_val) GANG(128)
+!!$ACC LOOP REDUCTION(min:dt_min_val) GANG(128)
   DO l=z_min,z_max
-!$ACC LOOP INDEPENDENT REDUCTION(min:dt_min_val)
+!$ACC LOOP REDUCTION(min:dt_min_val) WORKER
     DO k=y_min,y_max
-!$ACC LOOP INDEPENDENT REDUCTION(min:dt_min_val)
+!$ACC LOOP REDUCTION(min:dt_min_val) VECTOR
       DO j=x_min,x_max
         IF(dt_min(j,k,l).LT.dt_min_val) dt_min_val=dt_min(j,k,l)
       ENDDO

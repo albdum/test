@@ -230,10 +230,10 @@ step_time = timer()
     time = time + dt
 
     IF(summary_frequency.NE.0) THEN
-IF(MOD(step, summary_frequency).EQ.0) CALL field_summary()
+	IF(MOD(step, summary_frequency).EQ.0) CALL field_summary(c)
     ENDIF
-IF(visit_frequency.NE.0) THEN
-IF(MOD(step, visit_frequency).EQ.0) CALL visit()
+    IF(visit_frequency.NE.0) THEN
+	IF(MOD(step, visit_frequency).EQ.0) CALL visit(c)
     ENDIF
 
     ! Sometimes there can be a significant start up cost that appears in the first step.
@@ -323,7 +323,7 @@ WRITE(g_out,*)
         ENDIF
 ENDIF
 
-CALL clover_finalize
+	CALL clover_finalize
 
       EXIT
 

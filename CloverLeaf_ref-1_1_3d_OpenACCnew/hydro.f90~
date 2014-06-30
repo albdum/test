@@ -211,29 +211,29 @@ step_time = timer()
 
     step = step + 1
 
-    CALL timestep()
+    CALL timestep(c)
 
-    CALL PdV(.TRUE.)
+    CALL PdV(c,.TRUE.)
 
-    CALL accelerate()
+    CALL accelerate(c)
 
-    CALL PdV(.FALSE.)
+    CALL PdV(c,.FALSE.)
 
-    CALL flux_calc()
+    CALL flux_calc(c)
 
-    CALL advection()
+    CALL advection(c)
 
-    CALL reset_field()
+    CALL reset_field(c)
 
     advect_x = .NOT. advect_x
   
     time = time + dt
 
     IF(summary_frequency.NE.0) THEN
-IF(MOD(step, summary_frequency).EQ.0) CALL field_summary()
+IF(MOD(step, summary_frequency).EQ.0) CALL field_summary(c)
     ENDIF
 IF(visit_frequency.NE.0) THEN
-IF(MOD(step, visit_frequency).EQ.0) CALL visit()
+IF(MOD(step, visit_frequency).EQ.0) CALL visit(c)
     ENDIF
 
     ! Sometimes there can be a significant start up cost that appears in the first step.
@@ -246,8 +246,8 @@ IF(MOD(step, visit_frequency).EQ.0) CALL visit()
     IF(time+g_small.GT.end_time.OR.step.GE.end_step) THEN
 
 complete=.TRUE.
-      CALL field_summary()
-      IF(visit_frequency.NE.0) CALL visit()
+      CALL field_summary(c)
+      IF(visit_frequency.NE.0) CALL visit(c)
 
       wall_clock=timer() - timerstart
       IF ( parallel%boss ) THEN

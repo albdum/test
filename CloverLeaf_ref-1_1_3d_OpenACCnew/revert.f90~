@@ -23,7 +23,7 @@ MODULE revert_module
 
 CONTAINS
 
-SUBROUTINE revert()
+SUBROUTINE revert(c)
 
   USE clover_module
   USE revert_kernel_module
@@ -31,8 +31,6 @@ SUBROUTINE revert()
   IMPLICIT NONE
 
   INTEGER :: c
-
-  DO c=1,chunks_per_task
 
     IF(chunks(c)%task.EQ.parallel%task) THEN
 
@@ -61,8 +59,6 @@ SUBROUTINE revert()
       ENDIF
 
     ENDIF
-
-  ENDDO
 
 END SUBROUTINE revert
 

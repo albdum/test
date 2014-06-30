@@ -35,6 +35,8 @@ SUBROUTINE ideal_gas(chunk,predict)
 
   LOGICAl :: predict
 
+  IF(chunks(chunk)%task .EQ. parallel%task) THEN
+
     IF(.NOT.predict) THEN
       IF(use_fortran_kernels)THEN
         CALL ideal_gas_kernel(chunks(chunk)%field%x_min,    &
@@ -84,6 +86,8 @@ SUBROUTINE ideal_gas(chunk,predict)
                             chunks(chunk)%field%soundspeed  )
       ENDIF
     ENDIF
+
+  ENDIF
 
 END SUBROUTINE ideal_gas
 

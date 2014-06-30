@@ -123,53 +123,53 @@ INTEGER :: c,x_min,x_max,y_min,y_max,z_min,z_max
   LOGICAL :: profiler_off
 
 !$ACC DATA &
-!$ACC PCOPY(density0) &
-!$ACC PCOPY(density1) &
-!$ACC PCOPY(energy0) &
-!$ACC PCOPY(energy1) &
-!$ACC PCOPY(pressure) &
-!$ACC PCOPY(soundspeed) &
-!$ACC PCOPY(viscosity) &
-!$ACC PCOPY(xvel0) &
-!$ACC PCOPY(yvel0) &
-!$ACC PCOPY(zvel0) &
-!$ACC PCOPY(xvel1) &
-!$ACC PCOPY(yvel1) &
-!$ACC PCOPY(zvel1) &
-!$ACC PCOPY(vol_flux_x) &
-!$ACC PCOPY(vol_flux_y) &
-!$ACC PCOPY(vol_flux_z) &
-!$ACC PCOPY(mass_flux_x) &
-!$ACC PCOPY(mass_flux_y) &
-!$ACC PCOPY(mass_flux_z) &
-!$ACC PCOPY(volume) &
-!$ACC PCOPY(cellx) &
-!$ACC PCOPY(celly) &
-!$ACC PCOPY(cellz) &
-!$ACC PCOPY(celldx) &
-!$ACC PCOPY(celldy) &
-!$ACC PCOPY(celldz) &
-!$ACC PCOPY(vertexx) &
-!$ACC PCOPY(vertexdx) &
-!$ACC PCOPY(vertexy) &
-!$ACC PCOPY(vertexdy) &
-!$ACC PCOPY(vertexz) &
-!$ACC PCOPY(vertexdz) &
-!$ACC PCOPY(xarea) &
-!$ACC PCOPY(yarea) &
-!$ACC PCOPY(zarea) &
-!$ACC PCOPY(left_snd_buffer) &
-!$ACC PCOPY(left_rcv_buffer) &
-!$ACC PCOPY(right_snd_buffer) &
-!$ACC PCOPY(right_rcv_buffer) &
-!$ACC PCOPY(bottom_snd_buffer) &
-!$ACC PCOPY(bottom_rcv_buffer) &
-!$ACC PCOPY(top_snd_buffer) &
-!$ACC PCOPY(top_rcv_buffer) &
-!$ACC PCOPY(back_snd_buffer) &
-!$ACC PCOPY(back_rcv_buffer) &
-!$ACC PCOPY(front_snd_buffer) &
-!$ACC PCOPY(front_rcv_buffer)
+!$ACC COPY(density0) &
+!$ACC COPY(density1) &
+!$ACC COPY(energy0) &
+!$ACC COPY(energy1) &
+!$ACC COPY(pressure) &
+!$ACC COPY(soundspeed) &
+!$ACC COPY(viscosity) &
+!$ACC COPY(xvel0) &
+!$ACC COPY(yvel0) &
+!$ACC COPY(zvel0) &
+!$ACC COPY(xvel1) &
+!$ACC COPY(yvel1) &
+!$ACC COPY(zvel1) &
+!$ACC COPY(vol_flux_x) &
+!$ACC COPY(vol_flux_y) &
+!$ACC COPY(vol_flux_z) &
+!$ACC COPY(mass_flux_x) &
+!$ACC COPY(mass_flux_y) &
+!$ACC COPY(mass_flux_z) &
+!$ACC COPY(volume) &
+!$ACC COPY(cellx) &
+!$ACC COPY(celly) &
+!$ACC COPY(cellz) &
+!$ACC COPY(celldx) &
+!$ACC COPY(celldy) &
+!$ACC COPY(celldz) &
+!$ACC COPY(vertexx) &
+!$ACC COPY(vertexdx) &
+!$ACC COPY(vertexy) &
+!$ACC COPY(vertexdy) &
+!$ACC COPY(vertexz) &
+!$ACC COPY(vertexdz) &
+!$ACC COPY(xarea) &
+!$ACC COPY(yarea) &
+!$ACC COPY(zarea) &
+!$ACC COPY(left_snd_buffer) &
+!$ACC COPY(left_rcv_buffer) &
+!$ACC COPY(right_snd_buffer) &
+!$ACC COPY(right_rcv_buffer) &
+!$ACC COPY(bottom_snd_buffer) &
+!$ACC COPY(bottom_rcv_buffer) &
+!$ACC COPY(top_snd_buffer) &
+!$ACC COPY(top_rcv_buffer) &
+!$ACC COPY(back_snd_buffer) &
+!$ACC COPY(back_rcv_buffer) &
+!$ACC COPY(front_snd_buffer) &
+!$ACC COPY(front_rcv_buffer)
 
   ! Do no profile the start up costs otherwise the total times will not add up
   ! at the end
@@ -188,9 +188,7 @@ INTEGER :: c,x_min,x_max,y_min,y_max,z_min,z_max
 
   CALL clover_barrier
 
-  DO c = 1, chunks_per_task
-    CALL ideal_gas(c,.FALSE.)
-  END DO
+  CALL ideal_gas(c,.FALSE.)
 
   ! Prime all halo data for the first step
   fields=0

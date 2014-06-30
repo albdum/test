@@ -99,9 +99,9 @@ SUBROUTINE advec_mom_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(vel1) &
-!$ACC PCOPY(volume,mass_flux_x,mass_flux_y,vol_flux_x,vol_flux_y,celldx,celldy,mass_flux_z,density1) &
-!$ACC PCOPY(mom_flux,advec_vel,node_flux,node_mass_post,node_mass_pre,post_vol,pre_vol,celldz,vol_flux_z)
+!$ACC PRESENT(vel1) &
+!$ACC PRESENT(volume,mass_flux_x,mass_flux_y,vol_flux_x,vol_flux_y,celldx,celldy,mass_flux_z,density1) &
+!$ACC PRESENT(mom_flux,advec_vel,node_flux,node_mass_post,node_mass_pre,post_vol,pre_vol,celldz,vol_flux_z)
 
 ! I think these only have to be done once per cell advection sweep. So put in some logic so they are just done the first time
 !$ACC KERNELS

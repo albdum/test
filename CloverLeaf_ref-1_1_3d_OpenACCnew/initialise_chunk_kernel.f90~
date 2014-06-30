@@ -65,143 +65,119 @@ SUBROUTINE initialise_chunk_kernel(x_min,x_max,y_min,y_max,z_min,z_max,&
 
   INTEGER      :: j,k,l
 
-!$ACC DATA
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP PARALLEL
+!$OMP DO
   DO j=x_min-2,x_max+3
      vertexx(j)=xmin+dx*float(j-x_min)
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO j=x_min-2,x_max+3
     vertexdx(j)=dx
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO k=y_min-2,y_max+3
      vertexy(k)=ymin+dy*float(k-y_min)
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO k=y_min-2,y_max+3
     vertexdy(k)=dy
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO l=z_min-2,z_max+3
      vertexz(l)=zmin+dz*float(l-z_min)
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO l=z_min-2,z_max+3
     vertexdz(l)=dz
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO j=x_min-2,x_max+2
      cellx(j)=0.5*(vertexx(j)+vertexx(j+1))
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO j=x_min-2,x_max+2
      celldx(j)=dx
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO k=y_min-2,y_max+2
      celly(k)=0.5*(vertexy(k)+vertexy(k+1))
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO k=y_min-2,y_max+2
      celldy(k)=dy
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO l=z_min-2,z_max+2
      cellz(l)=0.5*(vertexz(l)+vertexz(l+1))
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO
   DO l=z_min-2,z_max+2
      celldz(l)=dz
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO PRIVATE(j,k)
   DO l=z_min-2,z_max+2
-!$ACC LOOP INDEPENDENT
     DO k=y_min-2,y_max+2
-!$ACC LOOP INDEPENDENT
       DO j=x_min-2,x_max+2
         volume(j,k,l)=dx*dy*dz
       ENDDO
     ENDDO
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO PRIVATE(j,k)
   DO l=z_min-2,z_max+2
-!$ACC LOOP INDEPENDENT
     DO k=y_min-2,y_max+2
-!$ACC LOOP INDEPENDENT
       DO j=x_min-2,x_max+2
         xarea(j,k,l)=celldy(k)*celldz(l)
       ENDDO
     ENDDO
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO PRIVATE(j,k)
   DO l=z_min-2,z_max+2
-!$ACC LOOP INDEPENDENT
     DO k=y_min-2,y_max+2
-!$ACC LOOP INDEPENDENT
       DO j=x_min-2,x_max+2
         yarea(j,k,l)=celldx(j)*celldz(l)
       ENDDO
     ENDDO
   ENDDO
-!$ACC END KERNELS
+!$OMP END DO
 
-!$ACC KERNELS
-!$ACC LOOP INDEPENDENT
+!$OMP DO PRIVATE(j,k)
   DO l=z_min-2,z_max+2
-!$ACC LOOP INDEPENDENT
     DO k=y_min-2,y_max+2
-!$ACC LOOP INDEPENDENT
       DO j=x_min-2,x_max+2
         zarea(j,k,l)=celldx(j)*celldy(k)
       ENDDO
     ENDDO
   ENDDO
-!$ACC END KERNELS
-!$ACC END DATA
+!$OMP END DO
+!$OMP END PARALLEL
 
 END SUBROUTINE initialise_chunk_kernel
 

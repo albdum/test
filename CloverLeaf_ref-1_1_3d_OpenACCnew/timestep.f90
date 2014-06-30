@@ -51,8 +51,6 @@ SUBROUTINE timestep(c)
 
   INTEGER :: fields(NUM_FIELDS)
 
-!$ INTEGER :: OMP_GET_THREAD_NUM
-
   dt    = g_big
   small=0
 

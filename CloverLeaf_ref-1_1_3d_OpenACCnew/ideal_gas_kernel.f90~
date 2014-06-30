@@ -59,7 +59,6 @@ SUBROUTINE ideal_gas_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
         soundspeed(j,k,l)=SQRT(sound_speed_squared)
       ENDDO
     ENDDO
-  ENDDO
 !$ACC END KERNELS
 !$ACC END DATA
 

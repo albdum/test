@@ -54,11 +54,11 @@ SUBROUTINE field_summary_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
 
 !FOr this part check http://www2.cs.uh.edu/~renganxu/papers/xu2014reduction.pdf
 !$ACC DATA &
-!$ACC PCOPY(volume,density0,energy0,pressure,xvel0,yvel0,zvel0)
+!$ACC PRESENT(volume,density0,energy0,pressure,xvel0,yvel0,zvel0)
 !$ACC KERNELS
-!$ACC LOOP GANG private(vsqrd,cell_vol,cell_mass,lv,jv,kv) REDUCTION(+:vol) REDUCTION(+:mass) REDUCTION(+:press) REDUCTION(+:ie) REDUCTION(+:ke)
+!$ACC LOOP GANG private(vsqrd,cell_vol,cell_mass,lv,jv,kv)
   DO l=z_min,z_max
-!$ACC LOOP WORKER REDUCTION(+:vol) REDUCTION(+:mass) REDUCTION(+:press) REDUCTION(+:ie) REDUCTION(+:ke)
+!$ACC LOOP WORKER
     DO k=y_min,y_max
 !$ACC LOOP VECTOR REDUCTION(+:vol) REDUCTION(+:mass) REDUCTION(+:press) REDUCTION(+:ie) REDUCTION(+:ke)
       DO j=x_min,x_max

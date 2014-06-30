@@ -33,7 +33,6 @@ SUBROUTINE update_halo(fields,depth)
 
   INTEGER :: c,fields(NUM_FIELDS),depth
 
-  DO c=1,chunks_per_task
   CALL clover_exchange(fields,depth)
 
       IF(use_fortran_kernels)THEN
@@ -95,7 +94,7 @@ SUBROUTINE update_halo(fields,depth)
                                 fields,                         &
                                 depth                           )
       ENDIF
-  ENDDO
+
 END SUBROUTINE update_halo
 
 END MODULE update_halo_module

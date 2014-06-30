@@ -2,7 +2,7 @@
 #PBS -N DEBUG
 #PBS -o OUT
 #PBS -q gpu
-#PBS -l nodes=1:ppn=16:gpus=1,walltime=00:10:00
+#PBS -l nodes=2:ppn=1:gpus=1,walltime=00:10:00
 #PBS -m abe
 #! application name
 application="clover_leaf"
@@ -25,8 +25,8 @@ cat $PBS_NODEFILE
 echo $PBS_NODEFILE
 date
 nnodes=`wc $PBS_NODEFILE | awk '{ print $1 }'`
-nnodes=1
-mpirun -machinefile $PBS_NODEFILE -np $nnodes ./$application
+nnodes=2
+mpirun -machinefile $PBS_GPUFILE -np $nnodes ./$application
 
 #!mpirun -machinefile nod -np 4 amplxe-cl -collect hotspots -result-dir r02mpi16openmptest23liakx ./clover_leaf
 

@@ -122,11 +122,6 @@ INTEGER :: c,x_min,x_max,y_min,y_max,z_min,z_max
   INTEGER :: fields(NUM_FIELDS)
   LOGICAL :: profiler_off
 
-!$ACC DATA &
-!$ACC CREATE(density0)&
-!$ACC COPY(density1)
-
-
   DO c=1,chunks_per_task
     IF(chunks(c)%task.EQ.parallel%task)THEN
       CALL initialise_chunk(c)
@@ -181,8 +176,6 @@ INTEGER :: c,x_min,x_max,y_min,y_max,z_min,z_max
   CALL field_summary()
 
   IF(visit_frequency.NE.0) CALL visit()
-
-!$ACC END DATA
 
   CALL clover_barrier
 
@@ -337,4 +330,5 @@ SUBROUTINE start
                           chunks(parallel%task)%front_rcv_buffer)
 
 END SUBROUTINE start
+
 

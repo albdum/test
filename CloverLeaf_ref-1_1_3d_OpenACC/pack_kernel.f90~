@@ -1,4 +1,4 @@
-!Crown Copyright 2012 AWE.
+!Crown PCOPYright 2012 AWE.
 !
 ! This file is part of CloverLeaf.
 !
@@ -12,7 +12,7 @@
 ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
 ! details.
 !
-! You should have received a copy of the GNU General Public License along with 
+! You should have received a PCOPY of the GNU General Public License along with 
 ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
 
 !>  @brief Fortran mpi buffer packing kernel
@@ -71,14 +71,14 @@ SUBROUTINE clover_pack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,  
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(left_snd_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(left_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         left_snd_buffer(index)=field(x_min+x_inc-1+j,k,l)
@@ -136,15 +136,15 @@ SUBROUTINE clover_unpack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(left_rcv_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(left_rcv_buffer)
 !$ACC UPDATE DEVICE (left_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         field(x_min-j,k,l)=left_rcv_buffer(index)
@@ -201,14 +201,14 @@ SUBROUTINE clover_pack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field, 
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(right_snd_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(right_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         right_snd_buffer(index)=field(x_max+1-j,k,l)
@@ -266,15 +266,15 @@ SUBROUTINE clover_unpack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(right_rcv_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(right_rcv_buffer)
 !$ACC UPDATE DEVICE (right_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=z_min-depth,z_max+z_inc+depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=1,depth
         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
         field(x_max+x_inc+j,k,l)=right_rcv_buffer(index)
@@ -332,14 +332,14 @@ SUBROUTINE clover_pack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field,   
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(top_snd_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(top_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO k=1,depth
 !$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         top_snd_buffer(index)=field(j,y_max+1-k,l)
@@ -398,15 +398,15 @@ SUBROUTINE clover_unpack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field, 
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(top_rcv_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(top_rcv_buffer)
 !$ACC UPDATE DEVICE (top_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO k=1,depth
 !$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         field(j,y_max+y_inc+k,l)=top_rcv_buffer(index)
@@ -463,14 +463,14 @@ SUBROUTINE clover_pack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,field,
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(bottom_snd_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(bottom_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO k=1,depth
 !$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         bottom_snd_buffer(index)=field(j,y_min+y_inc-1+k,l)
@@ -528,15 +528,15 @@ SUBROUTINE clover_unpack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,fiel
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(bottom_rcv_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(bottom_rcv_buffer)
 !$ACC UPDATE DEVICE (bottom_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO k=1,depth
 !$ACC LOOP INDEPENDENT
     DO l=z_min-depth,z_max+z_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
         field(j,y_min-k,l)=bottom_rcv_buffer(index)
@@ -593,14 +593,14 @@ SUBROUTINE clover_pack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,  
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(back_snd_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(back_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=1,depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         back_snd_buffer(index)=field(j,k,z_min+z_inc-1+l)
@@ -658,15 +658,15 @@ SUBROUTINE clover_unpack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(back_rcv_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(back_rcv_buffer)
 !$ACC UPDATE DEVICE (back_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=1,depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         field(j,k,z_min-l)=back_rcv_buffer(index)
@@ -722,14 +722,14 @@ SUBROUTINE clover_pack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field, 
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(front_snd_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(front_snd_buffer)
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=1,depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         front_snd_buffer(index)=field(j,k,z_max+1-l)
@@ -786,15 +786,15 @@ SUBROUTINE clover_unpack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field
   ENDIF
 
 !$ACC DATA &
-!$ACC COPY(field)&
-!$ACC PRESENT(front_rcv_buffer)
+!$ACC PCOPY(field)&
+!$ACC PCOPY(front_rcv_buffer)
 !$ACC UPDATE DEVICE (front_rcv_buffer(1:index))
 !$ACC KERNELS
 !$ACC LOOP INDEPENDENT
   DO l=1,depth
 !$ACC LOOP INDEPENDENT
     DO k=y_min-depth,y_max+y_inc+depth
-!$ACC LOOP INDEPENDENT PRIVATE(index)
+!$ACC LOOP INDEPENDENT 
       DO j=x_min-depth,x_max+x_inc+depth
         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + ((l-1)*(x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
         field(j,k,z_max+z_inc+l)=front_rcv_buffer(index)

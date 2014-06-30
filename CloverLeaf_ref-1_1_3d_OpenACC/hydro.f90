@@ -25,8 +25,8 @@ MODULE hydro_cycle_module
 
 CONTAINS
 
-SUBROUTINE hydro_cycle(c, &
-                       x_min, &
+SUBROUTINE hydro_cycle(c,     &
+		       x_min, &
                        x_max, &
                        y_min, &
                        y_max, &
@@ -368,8 +368,8 @@ INTEGER :: cells
 
   timerstart = timer()
 
-  CALL hydro_cycle(parallel%task+1, &
-                   chunks(parallel%task+1)%field%x_min, &
+  CALL hydro_cycle(parallel%task+1,                          &
+		   chunks(parallel%task+1)%field%x_min, &
                    chunks(parallel%task+1)%field%x_max, &
                    chunks(parallel%task+1)%field%y_min, &
                    chunks(parallel%task+1)%field%y_max, &

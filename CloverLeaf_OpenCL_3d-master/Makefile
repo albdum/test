@@ -1,25 +1,25 @@
 #Crown Copyright 2014 AWE.
 #
-# This file is part of CloverLeaf.
+# This file is part of TeaLeaf.
 #
-# CloverLeaf is free software: you can redistribute it and/or modify it under 
+# TeaLeaf is free software: you can redistribute it and/or modify it under 
 # the terms of the GNU General Public License as published by the 
 # Free Software Foundation, either version 3 of the License, or (at your option) 
 # any later version.
 #
-# CloverLeaf is distributed in the hope that it will be useful, but 
+# TeaLeaf is distributed in the hope that it will be useful, but 
 # WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
 # details.
 #
 # You should have received a copy of the GNU General Public License along with 
-# CloverLeaf. If not, see http://www.gnu.org/licenses/.
+# TeaLeaf. If not, see http://www.gnu.org/licenses/.
 
 #  @brief Makefile for CloverLeaf
 #  @author David Beckingsale, Wayne Gaudin
-#  @details Agnostic, platform independent makefile for the CloverLeaf benchmark code.
+#  @details Agnostic, platform independent makefile for the TeaLeaf benchmark code.
 
-# Agnostic, platform independent makefile for the CloverLeaf benchmark code.
+# Agnostic, platform independent makefile for the TeaLeaf benchmark code.
 # It is not meant to be clever in anyway, just a simple build out of the box script.
 # Just make sure mpif90 is in your path. It uses mpif90 even for all builds because this abstracts the base
 #  name of the compiler. If you are on a system that doesn't use mpif90, just replace mpif90 with the compiler name
@@ -72,7 +72,7 @@ OMP_PATHSCALE = -mp
 OMP_XL        = -qsmp=omp -qthreaded
 OMP=$(OMP_$(COMPILER))
 
-FLAGS_INTEL     = -O3  -no-prec-div -xhost -g
+FLAGS_INTEL     = -O3 -ipo -no-prec-div
 FLAGS_SUN       = -fast -xipo=2 -Xlistv4
 FLAGS_GNU       = -O3 -march=native -funroll-loops
 FLAGS_CRAY      = -em -ra -h acc_model=fast_addr:no_deep_copy:auto_async_all
@@ -80,7 +80,7 @@ FLAGS_PGI       = -fastsse -gopt -Mipa=fast -Mlist
 FLAGS_PATHSCALE = -O3
 FLAGS_XL       = -O5 -qipa=partition=large -g -qfullpath -Q -qsigtrap -qextname=flush:ideal_gas_kernel_c:viscosity_kernel_c:pdv_kernel_c:revert_kernel_c:accelerate_kernel_c:flux_calc_kernel_c:advec_cell_kernel_c:advec_mom_kernel_c:reset_field_kernel_c:timer_c:unpack_top_bottom_buffers_c:pack_top_bottom_buffers_c:unpack_left_right_buffers_c:pack_left_right_buffers_c:field_summary_kernel_c:update_halo_kernel_c:generate_chunk_kernel_c:initialise_chunk_kernel_c:calc_dt_kernel_c -qlistopt -qattr=full -qlist -qreport -qxref=full -qsource -qsuppress=1506-224:1500-036
 FLAGS_          = -O3
-CFLAGS_INTEL     = -O3  -no-prec-div -restrict -fno-alias
+CFLAGS_INTEL     = -O3 -ipo -no-prec-div -restrict -fno-alias
 CFLAGS_SUN       = -fast -xipo=2
 CFLAGS_GNU       = -O3 -march=native -funroll-loops
 CFLAGS_CRAY      = -em -h list=a
@@ -118,16 +118,9 @@ ifdef IEEE
   I3E=$(I3E_$(COMPILER))
 endif
 
-MPICXX_LIB=-lmpi_cxx
-
-LDLIBS+=-lOpenCL -lstdc++ $(MPICXX_LIB) $(BLAS)
-CXXFLAGS+=-D CL_USE_DEPRECATED_OPENCL_1_1_APIS -D __CL_ENABLE_EXCEPTIONS -D MPI_HDR
-
+LDLIBS+=-lOpenCL -lstdc++
+CXXFLAGS+=-D CL_USE_DEPRECATED_OPENCL_1_1_APIS -D __CL_ENABLE_EXCEPTIONS
 VPATH+=kernel_files
-
-ifdef PHI_SOURCE_PROFILING
-CXXFLAGS+=-D _PWD_="\"$(shell pwd)/\"" -D PHI_SOURCE_PROFILING
-endif
 
 ifdef VERBOSE
 CXXFLAGS+=-D OCL_VERBOSE
@@ -137,9 +130,6 @@ FLAGS=$(FLAGS_$(COMPILER)) $(OMP) $(I3E) $(OPTIONS)
 CFLAGS=$(CFLAGS_$(COMPILER)) $(OMP) $(I3E) $(C_OPTIONS) -c
 MPI_COMPILER=mpif90
 C_MPI_COMPILER=mpicc
-CXX_MPI_COMPILER=mpicc
-
-CXXFLAGS+=$(CFLAGS)
 
 C_FILES=\
 	accelerate_kernel_c.o           \
@@ -160,10 +150,10 @@ C_FILES=\
 	advec_mom_kernel_c.o
 
 FORTRAN_FILES=\
-	clover.o \
 	pack_kernel.o \
 	data.o			\
 	definitions.o			\
+	clover.o			\
 	report.o			\
 	timer.o			\
 	parse.o			\
@@ -202,8 +192,8 @@ FORTRAN_FILES=\
 	reset_field_kernel.o		\
 	reset_field.o			\
 	hydro.o			\
-	visit.o \
-    clover.o
+	visit.o			\
+	clover_leaf.o
 
 OCL_FILES=\
 	ocl_pack.o \
@@ -217,6 +207,7 @@ OCL_FILES=\
 	ideal_gas_kernel_ocl.o \
 	accelerate_kernel_ocl.o \
 	viscosity_kernel_ocl.o \
+	set_field_kernel_ocl.o \
 	reset_field_kernel_ocl.o \
 	field_summary_kernel_ocl.o \
 	PdV_kernel_ocl.o \
@@ -240,13 +231,13 @@ clover_leaf: Makefile $(FORTRAN_FILES) $(C_FILES) $(OCL_FILES)
 
 include make.deps
 
-%.o: %.cpp Makefile make.deps
-	$(CXX_MPI_COMPILER) $(CXXFLAGS) -c $< -o $*.o
+%.o: %.cpp Makefile
+	$(CXX) $(CXXFLAGS) -c $< -o $*.o
 %.mod %_module.mod %_leaf_module.mod: %.f90 %.o
 	@true
-%.o: %.f90 Makefile make.deps
-	$(MPI_COMPILER) $(FLAGS) -c $< -o $*.o
-%.o: %.c Makefile make.deps
+%.o: %.f90 Makefile
+	$(MPI_COMPILER) $(CFLAGS) -c $< -o $*.o
+%.o: %.c Makefile
 	$(C_MPI_COMPILER) $(CFLAGS) -c $< -o $*.o
 
 KERNEL_HDR_FILE=ocl_kernel_hdr.hpp
@@ -259,6 +250,7 @@ _kernel_strings.cpp: Makefile $(shell ls kernel_files/*.cl)
 		knl_name=`echo $$i | sed 's/\(\.\/\)\?kernel_files\///g' | sed 's/\.cl//g'`; \
 		echo "extern const std::string src_$$knl_name;" >> $(KERNEL_HDR_FILE); \
 		echo -n "const std::string src_$$knl_name(\"" >> _kernel_strings.cpp; \
+		echo "#include <kernel_files/macros_cl.cl> \\\n\\" >> _kernel_strings.cpp;\
 		cat $$i | sed 's/\\/\\\\/g' | sed 's/\([^\\]*\)$$/\1\\n\\/g' >> _kernel_strings.cpp; \
 		echo "\");" >> _kernel_strings.cpp; \
 	done

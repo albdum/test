@@ -1,0 +1,254 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:10      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: definitions.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Holds the high level Fortran data types
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details The high level data types used to store the mesh and field data
+(   21) !>  are defined here.
+(   22) !>
+(   23) !>  Also the global variables used for defining the input and controlling the
+(   24) !>  scheme are defined here.
+(   25) 
+(   26) MODULE definitions_module
+(   27) 
+(   28)    USE data_module
+(   29)    
+(   30)    IMPLICIT NONE
+(   31) 
+(   32)    TYPE state_type
+(   33)       LOGICAL            :: defined
+(   34) 
+(   35)       REAL(KIND=8)       :: density          &
+(   36)                            ,energy           &
+(   37)                            ,xvel             &
+(   38)                            ,yvel             &
+(   39)                            ,zvel
+(   40) 
+(   41)       INTEGER            :: geometry
+(   42) 
+(   43)       REAL(KIND=8)       :: xmin               &
+(   44)                            ,xmax               &
+(   45)                            ,ymin               &
+(   46)                            ,ymax               &
+(   47)                            ,zmin               &
+(   48)                            ,zmax               &
+(   49)                            ,radius
+(   50)    END TYPE state_type
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:10      page 2
+
+(   51) 
+(   52)    TYPE(state_type), ALLOCATABLE             :: states(:)
+(   53)    INTEGER                                   :: number_of_states
+(   54) 
+(   55)    TYPE grid_type
+(   56)      REAL(KIND=8)       :: xmin            &
+(   57)                           ,ymin            &
+(   58)                           ,zmin            &
+(   59)                           ,xmax            &
+(   60)                           ,ymax            &
+(   61)                           ,zmax
+(   62)                      
+(   63)      INTEGER            :: x_cells              &
+(   64)                           ,y_cells              &
+(   65)                           ,z_cells
+(   66)    END TYPE grid_type
+(   67) 
+(   68)    INTEGER      :: step
+(   69) 
+(   70)    LOGICAL      :: advect_x
+(   71) 
+(   72)    INTEGER      :: error_condition
+(   73) 
+(   74)    INTEGER      :: test_problem
+(   75)    LOGICAL      :: complete
+(   76) 
+(   77)    LOGICAL      :: use_OpenCL_kernels
+(   78)    LOGICAL      :: use_fortran_kernels
+(   79)    LOGICAL      :: use_C_kernels
+(   80)    LOGICAL      :: use_OA_kernels
+(   81) 
+(   82)    LOGICAL      :: profiler_on ! Internal code profiler to make comparisons across systems easier
+(   83) 
+(   84)    TYPE profiler_type
+(   85)      REAL(KIND=8)       :: timestep        &
+(   86)                           ,acceleration    &
+(   87)                           ,PdV             &
+(   88)                           ,cell_advection  &
+(   89)                           ,mom_advection   &
+(   90)                           ,viscosity       &
+(   91)                           ,ideal_gas       &
+(   92)                           ,visit           &
+(   93)                           ,summary         &
+(   94)                           ,reset           &
+(   95)                           ,revert          &
+(   96)                           ,flux            &
+(   97)                           ,halo_exchange
+(   98)                      
+(   99)    END TYPE profiler_type
+(  100)    TYPE(profiler_type)  :: profiler
+(  101) 
+(  102)    REAL(KIND=8) :: end_time
+(  103) 
+(  104)    INTEGER      :: end_step
+(  105) 
+(  106)    REAL(KIND=8) :: dtold          &
+(  107)                   ,dt             &
+(  108)                   ,time           &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:10      page 3
+
+(  109)                   ,dtinit         &
+(  110)                   ,dtmin          &
+(  111)                   ,dtmax          &
+(  112)                   ,dtrise         &
+(  113)                   ,dtu_safe       &
+(  114)                   ,dtv_safe       &
+(  115)                   ,dtw_safe       &
+(  116)                   ,dtc_safe       &
+(  117)                   ,dtdiv_safe     &
+(  118)                   ,dtc            &
+(  119)                   ,dtu            &
+(  120)                   ,dtv            &
+(  121)                   ,dtw            &
+(  122)                   ,dtdiv
+(  123) 
+(  124)    INTEGER      :: visit_frequency   &
+(  125)                   ,summary_frequency
+(  126) 
+(  127)    INTEGER         :: jdt,kdt
+(  128) 
+(  129)    TYPE field_type
+(  130)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: density0,density1
+(  131)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: energy0,energy1
+(  132)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: pressure
+(  133)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: viscosity
+(  134)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: soundspeed
+(  135)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: xvel0,xvel1
+(  136)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: yvel0,yvel1
+(  137)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: zvel0,zvel1
+(  138)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: vol_flux_x,mass_flux_x
+(  139)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: vol_flux_y,mass_flux_y
+(  140)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: vol_flux_z,mass_flux_z
+(  141)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array1 !node_flux, stepbymass, volume_change, pre_vol
+(  142)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array2 !node_mass_post, post_vol
+(  143)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array3 !node_mass_pre,pre_mass
+(  144)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array4 !advec_vel, post_mass
+(  145)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array5 !mom_flux, advec_vol
+(  146)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array6 !pre_vol, post_ener
+(  147)      REAL(KIND=8),    DIMENSION(:,:,:), ALLOCATABLE :: work_array7 !post_vol, ener_flux
+(  148) 
+(  149)      INTEGER         :: left            &
+(  150)                        ,right           &
+(  151)                        ,bottom          &
+(  152)                        ,top             &
+(  153)                        ,back            &
+(  154)                        ,front           &
+(  155)                        ,left_boundary   &
+(  156)                        ,right_boundary  &
+(  157)                        ,bottom_boundary &
+(  158)                        ,top_boundary    &
+(  159)                        ,front_boundary  &
+(  160)                        ,back_boundary
+(  161) 
+(  162)      INTEGER         :: x_min  &
+(  163)                        ,y_min  &
+(  164)                        ,z_min  &
+(  165)                        ,x_max  &
+(  166)                        ,y_max  &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:10      page 4
+
+(  167)                        ,z_max
+(  168) 
+(  169)      REAL(KIND=8), DIMENSION(:),   ALLOCATABLE :: cellx    &
+(  170)                                                  ,celly    &
+(  171)                                                  ,cellz    &
+(  172)                                                  ,vertexx  &
+(  173)                                                  ,vertexy  &
+(  174)                                                  ,vertexz  &
+(  175)                                                  ,celldx   &
+(  176)                                                  ,celldy   &
+(  177)                                                  ,celldz   &
+(  178)                                                  ,vertexdx &
+(  179)                                                  ,vertexdy &
+(  180)                                                  ,vertexdz
+(  181) 
+(  182)      REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: volume  &
+(  183)                                                  ,xarea   &
+(  184)                                                  ,yarea   &
+(  185)                                                  ,zarea
+(  186) 
+(  187)    END TYPE field_type
+(  188)    
+(  189)    TYPE chunk_type
+(  190) 
+(  191)      INTEGER         :: task   !mpi task
+(  192) 
+(  193)      INTEGER         :: chunk_neighbours(6) ! Chunks, not tasks, so we can overload in the future
+(  194) 
+(  195)      ! Idealy, create an array to hold the buffers for each field so a commuincation only needs
+(  196)      !  one send and one receive per face, rather than per field.
+(  197)      ! If chunks are overloaded, i.e. more chunks than tasks, might need to pack for a task to task comm 
+(  198)      !  rather than a chunk to chunk comm. See how performance is at high core counts before deciding
+(  199)      REAL(KIND=8),ALLOCATABLE:: left_rcv_buffer(:),right_rcv_buffer(:)
+(  200)      REAL(KIND=8),ALLOCATABLE:: bottom_rcv_buffer(:),top_rcv_buffer(:)
+(  201)      REAL(KIND=8),ALLOCATABLE:: back_rcv_buffer(:),front_rcv_buffer(:)
+(  202)      REAL(KIND=8),ALLOCATABLE:: left_snd_buffer(:),right_snd_buffer(:)
+(  203)      REAL(KIND=8),ALLOCATABLE:: bottom_snd_buffer(:),top_snd_buffer(:)
+(  204)      REAL(KIND=8),ALLOCATABLE:: back_snd_buffer(:),front_snd_buffer(:)
+(  205) 
+(  206)      TYPE(field_type):: field
+(  207) 
+(  208)   END TYPE chunk_type
+(  209) 
+(  210) 
+(  211)   TYPE(chunk_type),  ALLOCATABLE       :: chunks(:)
+(  212)   INTEGER                              :: number_of_chunks
+(  213) 
+(  214)   TYPE(grid_type)                      :: grid
+(  215) 
+(  216) END MODULE definitions_module

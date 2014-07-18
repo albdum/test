@@ -1,0 +1,169 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: field_summary.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Driver for the field summary kernels
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details The user specified field summary kernel is invoked here. A summation
+(   21) !>  across all mesh chunks is then performed and the information outputed.
+(   22) !>  If the run is a test problem, the final result is compared with the expected
+(   23) !>  result and the difference output.
+(   24) !>  Note the reference solution is the value returned from an Intel compiler with
+(   25) !>  ieee options set on a single core crun.
+(   26) 
+(   27) SUBROUTINE field_summary()
+(   28) 
+(   29)   USE clover_module
+(   30)   USE ideal_gas_module
+(   31)   USE field_summary_kernel_module
+(   32) 
+(   33)   IMPLICIT NONE
+(   34) 
+(   35)   REAL(KIND=8) :: vol,mass,ie,ke,press
+(   36)   REAL(KIND=8) :: qa_diff
+(   37) 
+(   38) !$ INTEGER :: OMP_GET_THREAD_NUM
+(   39) 
+(   40)   INTEGER      :: c
+(   41) 
+(   42)   REAL(KIND=8) :: kernel_time,timer
+(   43) 
+(   44)   IF(parallel%boss)THEN
+(   45)     WRITE(g_out,*)
+(   46)     WRITE(g_out,*) 'Time ',time
+(   47)     WRITE(g_out,'(a13,7a16)')'           ','Volume','Mass','Density','Pressure','Internal Energy','Kinetic Energy','Total Energy'
+(   48)   ENDIF
+(   49) 
+(   50)   IF(profiler_on) kernel_time=timer()
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 2
+
+(   51)   DO c=1,chunks_per_task
+(   52)     CALL ideal_gas(c,.FALSE.)
+(   53)   ENDDO
+(   54)   IF(profiler_on) profiler%ideal_gas=profiler%ideal_gas+(timer()-kernel_time)
+(   55) 
+(   56)   IF(profiler_on) kernel_time=timer()
+(   57)   IF(use_fortran_kernels)THEN
+(   58)     DO c=1,chunks_per_task
+(   59)       IF(chunks(c)%task.EQ.parallel%task) THEN
+(   60)         CALL field_summary_kernel(chunks(c)%field%x_min,                   &
+(   61)                                   chunks(c)%field%x_max,                   &
+(   62)                                   chunks(c)%field%y_min,                   &
+(   63)                                   chunks(c)%field%y_max,                   &
+(   64)                                   chunks(c)%field%z_min,                   &
+(   65)                                   chunks(c)%field%z_max,                   &
+(   66)                                   chunks(c)%field%volume,                  &
+(   67)                                   chunks(c)%field%density0,                &
+(   68)                                   chunks(c)%field%energy0,                 &
+(   69)                                   chunks(c)%field%pressure,                &
+(   70)                                   chunks(c)%field%xvel0,                   &
+(   71)                                   chunks(c)%field%yvel0,                   &
+(   72)                                   chunks(c)%field%zvel0,                   &
+(   73)                                   vol,mass,ie,ke,press                     )
+(   74)       ENDIF
+(   75)     ENDDO
+(   76)   ELSEIF(use_opencl_kernels)THEN
+(   77)     DO c=1,chunks_per_task
+(   78)       IF(chunks(c)%task.EQ.parallel%task) THEN
+(   79)         CALL field_summary_kernel_ocl(vol,mass,ie,ke,press)
+(   80)       ENDIF
+(   81) ENDDO
+(   82)   ELSEIF(use_C_kernels)THEN
+(   83)     DO c=1,chunks_per_task
+(   84)       IF(chunks(c)%task.EQ.parallel%task) THEN
+(   85)         CALL field_summary_kernel_c(chunks(c)%field%x_min,                 &
+(   86)                                   chunks(c)%field%x_max,                   &
+(   87)                                   chunks(c)%field%y_min,                   &
+(   88)                                   chunks(c)%field%y_max,                   &
+(   89)                                   chunks(c)%field%z_min,                   &
+(   90)                                   chunks(c)%field%z_max,                   &
+(   91)                                   chunks(c)%field%volume,                  &
+(   92)                                   chunks(c)%field%density0,                &
+(   93)                                   chunks(c)%field%energy0,                 &
+(   94)                                   chunks(c)%field%pressure,                &
+(   95)                                   chunks(c)%field%xvel0,                   &
+(   96)                                   chunks(c)%field%yvel0,                   &
+(   97)                                   chunks(c)%field%zvel0,                   &
+(   98)                                   vol,mass,ie,ke,press                     )
+(   99)       ENDIF
+(  100)     ENDDO
+(  101)   ENDIF
+(  102) 
+(  103)   ! For mpi I need a reduction here
+(  104)   CALL clover_sum(vol)
+(  105)   CALL clover_sum(mass)
+(  106)   CALL clover_sum(press)
+(  107)   CALL clover_sum(ie)
+(  108)   CALL clover_sum(ke)
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 3
+
+(  109)   IF(profiler_on) profiler%summary=profiler%summary+(timer()-kernel_time)
+(  110) 
+(  111)   IF(parallel%boss) THEN
+(  112) !$  IF(OMP_GET_THREAD_NUM().EQ.0) THEN
+(  113)       WRITE(g_out,'(a6,i7,7e16.4)')' step:',step,vol,mass,mass/vol,press/vol,ie,ke,ie+ke
+(  114)       WRITE(g_out,*)
+(  115) !$  ENDIF
+(  116)    ENDIF
+(  117) 
+(  118)   !Check if this is the final call and if it is a test problem, check the result.
+(  119)   IF(complete) THEN
+(  120)     IF(parallel%boss) THEN
+(  121) !$    IF(OMP_GET_THREAD_NUM().EQ.0) THEN
+(  122)         IF(test_problem.EQ.1) THEN
+(  123)           qa_diff=ABS((100.0_8*(ke/1.82280367310258_8))-100.0_8)
+(  124)           WRITE(*,*)"Test problem 1 is within",qa_diff,"% of the expected solution"
+(  125)           WRITE(g_out,*)"Test problem 1 is within",qa_diff,"% of the expected solution"
+(  126)           IF(qa_diff.LT.0.001) THEN
+(  127)             WRITE(*,*)"This test is considered PASSED"
+(  128)             WRITE(g_out,*)"This test is considered PASSED"
+(  129)           ELSE
+(  130)             WRITE(*,*)"This test is considered NOT PASSED"
+(  131)             WRITE(g_out,*)"This is test is considered NOT PASSED"
+(  132)           ENDIF
+(  133)         ENDIF
+(  134) !$    ENDIF
+(  135)     ENDIF
+(  136)   ENDIF
+(  137) 
+(  138) 
+(  139) END SUBROUTINE field_summary

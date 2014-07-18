@@ -1,0 +1,858 @@
+PGC Version 13.5          07/18/2014  14:45:38      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: pack_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) * the terms of the GNU General Public License as published by the 
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with 
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C mpi buffer packing kernel
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details Packs/unpacks mpi send and receive buffers
+(   22)  */
+(   23) 
+(   24) #include <stdio.h>
+(   25) #include <stdlib.h>
+(   26) #include "ftocmacros.h"
+(   27) #include <math.h>
+(   28) 
+(   29) void clover_pack_message_left_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(   30)                                  double *left_snd_buffer,
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 2
+
+
+(   31)                                  int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(   32)                                  int *dpth, int *fld_typ,
+(   33)                                  int *bffr_ffst)
+(   34) 
+(   35) {
+(   36)   int x_min=*xmin;
+(   37)   int x_max=*xmax;
+(   38)   int y_min=*ymin;
+(   39)   int y_max=*ymax;
+(   40)   int CELL_DATA=*CLL_DT;
+(   41)   int VERTEX_DATA=*VRTX_DT;
+(   42)   int X_FACE_DATA=*X_FC_DT;
+(   43)   int Y_FACE_DATA=*Y_FC_DT;
+(   44)   int field_type=*fld_typ;
+(   45)   int depth=*dpth;
+(   46)   int buffer_offset=*bffr_ffst;
+(   47) 
+(   48)   int j,k,index,x_inc,y_inc;
+(   49) 
+(   50) //Pack 
+(   51) 
+(   52) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(   53)   if(field_type==CELL_DATA) {
+(   54)     x_inc=0;
+(   55)     y_inc=0;
+(   56)   }
+(   57)   if(field_type==VERTEX_DATA) {
+(   58)     x_inc=1;
+(   59)     y_inc=1;
+(   60)   }
+(   61)   if(field_type==X_FACE_DATA) {
+(   62)     x_inc=1;
+(   63)     y_inc=0;
+(   64)   }
+(   65)   if(field_type==Y_FACE_DATA) {
+(   66)     x_inc=0;
+(   67)     y_inc=1;
+(   68)   }
+(   69) 
+(   70) #pragma omp parallel
+(   71)  {
+(   72) 
+(   73) #pragma omp for private(j,k,index)
+(   74)   for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(   75) #pragma ivdep
+(   76)     for (j=1;j<=depth;j++) {
+(   77)       index=buffer_offset + j+(k+depth-1)*depth;
+(   78)       left_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(x_min+x_inc-1+j,k,x_max+4+x_inc,x_min-2,y_min-2)];
+(   79)     }
+(   80)   }
+(   81) 
+(   82)  }
+(   83) 
+(   84) }
+(   85) 
+(   86) void clover_unpack_message_left_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(   87)                                    double *left_rcv_buffer,
+(   88)                                    int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(   89)                                    int *dpth, int *fld_typ,
+(   90)                                    int *bffr_ffst)
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 3
+
+
+(   91) 
+(   92) {
+(   93)   int x_min=*xmin;
+(   94)   int x_max=*xmax;
+(   95)   int y_min=*ymin;
+(   96)   int y_max=*ymax;
+(   97)   int CELL_DATA=*CLL_DT;
+(   98)   int VERTEX_DATA=*VRTX_DT;
+(   99)   int X_FACE_DATA=*X_FC_DT;
+(  100)   int Y_FACE_DATA=*Y_FC_DT;
+(  101)   int field_type=*fld_typ;
+(  102)   int depth=*dpth;
+(  103)   int buffer_offset=*bffr_ffst;
+(  104) 
+(  105)   int j,k,index,x_inc,y_inc;
+(  106) 
+(  107) //Unpack 
+(  108) 
+(  109) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  110)   if(field_type==CELL_DATA) {
+(  111)     x_inc=0;
+(  112)     y_inc=0;
+(  113)   }
+(  114)   if(field_type==VERTEX_DATA) {
+(  115)     x_inc=1;
+(  116)     y_inc=1;
+(  117)   }
+(  118)   if(field_type==X_FACE_DATA) {
+(  119)     x_inc=1;
+(  120)     y_inc=0;
+(  121)   }
+(  122)   if(field_type==Y_FACE_DATA) {
+(  123)     x_inc=0;
+(  124)     y_inc=1;
+(  125)   }
+(  126) 
+(  127) #pragma omp parallel
+(  128)  {
+(  129) 
+(  130) #pragma omp for private(j,k,index)
+(  131)   for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  132) #pragma ivdep
+(  133)     for (j=1;j<=depth;j++) {
+(  134)       index=buffer_offset + j+(k+depth-1)*depth;
+(  135)       field[FTNREF2D(x_min-j,k,x_max+4+x_inc,x_min-2,y_min-2)]=left_rcv_buffer[FTNREF1D(index,1)];
+(  136)     }
+(  137)   }
+(  138) 
+(  139)  }
+(  140) 
+(  141) }
+(  142) 
+(  143) void clover_pack_message_right_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  144)                                   double *right_snd_buffer,
+(  145)                                   int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  146)                                   int *dpth, int *fld_typ,
+(  147)                                   int *bffr_ffst)
+(  148) 
+(  149) {
+(  150)   int x_min=*xmin;
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 4
+
+
+(  151)   int x_max=*xmax;
+(  152)   int y_min=*ymin;
+(  153)   int y_max=*ymax;
+(  154)   int CELL_DATA=*CLL_DT;
+(  155)   int VERTEX_DATA=*VRTX_DT;
+(  156)   int X_FACE_DATA=*X_FC_DT;
+(  157)   int Y_FACE_DATA=*Y_FC_DT;
+(  158)   int field_type=*fld_typ;
+(  159)   int depth=*dpth;
+(  160)   int buffer_offset=*bffr_ffst;
+(  161) 
+(  162)   int j,k,index,x_inc,y_inc;
+(  163) 
+(  164) //Pack 
+(  165) 
+(  166) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  167)   if(field_type==CELL_DATA) {
+(  168)     x_inc=0;
+(  169)     y_inc=0;
+(  170)   }
+(  171)   if(field_type==VERTEX_DATA) {
+(  172)     x_inc=1;
+(  173)     y_inc=1;
+(  174)   }
+(  175)   if(field_type==X_FACE_DATA) {
+(  176)     x_inc=1;
+(  177)     y_inc=0;
+(  178)   }
+(  179)   if(field_type==Y_FACE_DATA) {
+(  180)     x_inc=0;
+(  181)     y_inc=1;
+(  182)   }
+(  183) 
+(  184) #pragma omp parallel
+(  185)  {
+(  186) 
+(  187) #pragma omp for private(j,k,index)
+(  188)   for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  189) #pragma ivdep
+(  190)     for (j=1;j<=depth;j++) {
+(  191)       index=buffer_offset + j+(k+depth-1)*depth;
+(  192)       right_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(x_max+1-j,k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  193)     }
+(  194)   }
+(  195) 
+(  196)  }
+(  197) 
+(  198) }
+(  199) 
+(  200) void clover_unpack_message_right_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  201)                                     double *right_rcv_buffer,
+(  202)                                     int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  203)                                     int *dpth, int *fld_typ,
+(  204)                                     int *bffr_ffst)
+(  205) 
+(  206) {
+(  207)   int x_min=*xmin;
+(  208)   int x_max=*xmax;
+(  209)   int y_min=*ymin;
+(  210)   int y_max=*ymax;
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 5
+
+
+(  211)   int CELL_DATA=*CLL_DT;
+(  212)   int VERTEX_DATA=*VRTX_DT;
+(  213)   int X_FACE_DATA=*X_FC_DT;
+(  214)   int Y_FACE_DATA=*Y_FC_DT;
+(  215)   int field_type=*fld_typ;
+(  216)   int depth=*dpth;
+(  217)   int buffer_offset=*bffr_ffst;
+(  218) 
+(  219)   int j,k,index,x_inc,y_inc;
+(  220) 
+(  221) //Pack 
+(  222) 
+(  223) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  224)   if(field_type==CELL_DATA) {
+(  225)     x_inc=0;
+(  226)     y_inc=0;
+(  227)   }
+(  228)   if(field_type==VERTEX_DATA) {
+(  229)     x_inc=1;
+(  230)     y_inc=1;
+(  231)   }
+(  232)   if(field_type==X_FACE_DATA) {
+(  233)     x_inc=1;
+(  234)     y_inc=0;
+(  235)   }
+(  236)   if(field_type==Y_FACE_DATA) {
+(  237)     x_inc=0;
+(  238)     y_inc=1;
+(  239)   }
+(  240) 
+(  241) #pragma omp parallel
+(  242)  {
+(  243) 
+(  244) #pragma omp for private(j,k,index)
+(  245)   for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  246) #pragma ivdep
+(  247)     for (j=1;j<=depth;j++) {
+(  248)       index=buffer_offset + j+(k+depth-1)*depth;
+(  249)       field[FTNREF2D(x_max+x_inc+j,k,x_max+4+x_inc,x_min-2,y_min-2)]=right_rcv_buffer[FTNREF1D(index,1)];
+(  250)     }
+(  251)   }
+(  252) 
+(  253)  }
+(  254) 
+(  255) }
+(  256) 
+(  257) void clover_pack_message_top_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  258)                                 double *top_snd_buffer,
+(  259)                                 int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  260)                                 int *dpth, int *fld_typ,
+(  261)                                 int *bffr_ffst)
+(  262) 
+(  263) {
+(  264)   int x_min=*xmin;
+(  265)   int x_max=*xmax;
+(  266)   int y_min=*ymin;
+(  267)   int y_max=*ymax;
+(  268)   int CELL_DATA=*CLL_DT;
+(  269)   int VERTEX_DATA=*VRTX_DT;
+(  270)   int X_FACE_DATA=*X_FC_DT;
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 6
+
+
+(  271)   int Y_FACE_DATA=*Y_FC_DT;
+(  272)   int field_type=*fld_typ;
+(  273)   int depth=*dpth;
+(  274)   int buffer_offset=*bffr_ffst;
+(  275) 
+(  276)   int j,k,index,x_inc,y_inc;
+(  277) 
+(  278) //Pack 
+(  279) 
+(  280) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  281)   if(field_type==CELL_DATA) {
+(  282)     x_inc=0;
+(  283)     y_inc=0;
+(  284)   }
+(  285)   if(field_type==VERTEX_DATA) {
+(  286)     x_inc=1;
+(  287)     y_inc=1;
+(  288)   }
+(  289)   if(field_type==X_FACE_DATA) {
+(  290)     x_inc=1;
+(  291)     y_inc=0;
+(  292)   }
+(  293)   if(field_type==Y_FACE_DATA) {
+(  294)     x_inc=0;
+(  295)     y_inc=1;
+(  296)   }
+(  297) 
+(  298) #pragma omp parallel
+(  299)  {
+(  300) 
+(  301)   for (k=1;k<=depth;k++) {
+(  302) #pragma omp for private(j,index)
+(  303)     for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  304)       index=buffer_offset + j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  305)       top_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(j,y_max+1-k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  306)     }
+(  307)   }
+(  308) 
+(  309)  }
+(  310) 
+(  311) }
+(  312) 
+(  313) void clover_pack_message_bottom_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  314)                                    double *bottom_snd_buffer,
+(  315)                                    int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  316)                                    int *dpth, int *fld_typ,
+(  317)                                    int *bffr_ffst)
+(  318) 
+(  319) {
+(  320)   int x_min=*xmin;
+(  321)   int x_max=*xmax;
+(  322)   int y_min=*ymin;
+(  323)   int y_max=*ymax;
+(  324)   int CELL_DATA=*CLL_DT;
+(  325)   int VERTEX_DATA=*VRTX_DT;
+(  326)   int X_FACE_DATA=*X_FC_DT;
+(  327)   int Y_FACE_DATA=*Y_FC_DT;
+(  328)   int field_type=*fld_typ;
+(  329)   int depth=*dpth;
+(  330)   int buffer_offset=*bffr_ffst;
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 7
+
+
+(  331) 
+(  332)   int j,k,index,x_inc,y_inc;
+(  333) 
+(  334) //Pack 
+(  335) 
+(  336) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  337)   if(field_type==CELL_DATA) {
+(  338)     x_inc=0;
+(  339)     y_inc=0;
+(  340)   }
+(  341)   if(field_type==VERTEX_DATA) {
+(  342)     x_inc=1;
+(  343)     y_inc=1;
+(  344)   }
+(  345)   if(field_type==X_FACE_DATA) {
+(  346)     x_inc=1;
+(  347)     y_inc=0;
+(  348)   }
+(  349)   if(field_type==Y_FACE_DATA) {
+(  350)     x_inc=0;
+(  351)     y_inc=1;
+(  352)   }
+(  353) 
+(  354) #pragma omp parallel
+(  355)  {
+(  356) 
+(  357)   for (k=1;k<=depth;k++) {
+(  358) #pragma omp for private(j,index)
+(  359)     for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  360)       index=buffer_offset + j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  361)       bottom_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(j,y_min+y_inc-1+k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  362)     }
+(  363)   }
+(  364) 
+(  365)  }
+(  366) 
+(  367) }
+(  368) 
+(  369) void clover_unpack_message_bottom_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  370)                                      double *bottom_rcv_buffer,
+(  371)                                      int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  372)                                      int *dpth, int *fld_typ,
+(  373)                                      int *bffr_ffst)
+(  374) 
+(  375) {
+(  376)   int x_min=*xmin;
+(  377)   int x_max=*xmax;
+(  378)   int y_min=*ymin;
+(  379)   int y_max=*ymax;
+(  380)   int CELL_DATA=*CLL_DT;
+(  381)   int VERTEX_DATA=*VRTX_DT;
+(  382)   int X_FACE_DATA=*X_FC_DT;
+(  383)   int Y_FACE_DATA=*Y_FC_DT;
+(  384)   int field_type=*fld_typ;
+(  385)   int depth=*dpth;
+(  386)   int buffer_offset=*bffr_ffst;
+(  387) 
+(  388)   int j,k,index,x_inc,y_inc;
+(  389) 
+(  390) //Unpack 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 8
+
+
+(  391) 
+(  392) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  393)   if(field_type==CELL_DATA) {
+(  394)     x_inc=0;
+(  395)     y_inc=0;
+(  396)   }
+(  397)   if(field_type==VERTEX_DATA) {
+(  398)     x_inc=1;
+(  399)     y_inc=1;
+(  400)   }
+(  401)   if(field_type==X_FACE_DATA) {
+(  402)     x_inc=1;
+(  403)     y_inc=0;
+(  404)   }
+(  405)   if(field_type==Y_FACE_DATA) {
+(  406)     x_inc=0;
+(  407)     y_inc=1;
+(  408)   }
+(  409) 
+(  410) #pragma omp parallel
+(  411)  {
+(  412) 
+(  413)   for (k=1;k<=depth;k++) {
+(  414) #pragma omp for private(j,index)
+(  415)     for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  416)       index= buffer_offset + j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  417)       field[FTNREF2D(j,y_min-k,x_max+4+x_inc,x_min-2,y_min-2)]=bottom_rcv_buffer[FTNREF1D(index,1)];
+(  418)     }
+(  419)   }
+(  420) 
+(  421)  }
+(  422) 
+(  423) }
+(  424) 
+(  425) void clover_unpack_message_top_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  426)                                   double *top_rcv_buffer,
+(  427)                                   int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  428)                                   int *dpth, int *fld_typ,
+(  429)                                   int *bffr_ffst)
+(  430) 
+(  431) {
+(  432)   int x_min=*xmin;
+(  433)   int x_max=*xmax;
+(  434)   int y_min=*ymin;
+(  435)   int y_max=*ymax;
+(  436)   int CELL_DATA=*CLL_DT;
+(  437)   int VERTEX_DATA=*VRTX_DT;
+(  438)   int X_FACE_DATA=*X_FC_DT;
+(  439)   int Y_FACE_DATA=*Y_FC_DT;
+(  440)   int field_type=*fld_typ;
+(  441)   int depth=*dpth;
+(  442)   int buffer_offset=*bffr_ffst;
+(  443) 
+(  444)   int j,k,index,x_inc,y_inc;
+(  445) 
+(  446) //Unpack 
+(  447) 
+(  448) // These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  449)   if(field_type==CELL_DATA) {
+(  450)     x_inc=0;
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 9
+
+
+(  451)     y_inc=0;
+(  452)   }
+(  453)   if(field_type==VERTEX_DATA) {
+(  454)     x_inc=1;
+(  455)     y_inc=1;
+(  456)   }
+(  457)   if(field_type==X_FACE_DATA) {
+(  458)     x_inc=1;
+(  459)     y_inc=0;
+(  460)   }
+(  461)   if(field_type==Y_FACE_DATA) {
+(  462)     x_inc=0;
+(  463)     y_inc=1;
+(  464)   }
+(  465) 
+(  466) #pragma omp parallel
+(  467)  {
+(  468) 
+(  469)   for (k=1;k<=depth;k++) {
+(  470) #pragma omp for private(j,index)
+(  471)     for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  472)       index= buffer_offset + j + depth+(k-1)*(x_max+x_inc+(2*depth));
+(  473)       field[FTNREF2D(j,y_max+y_inc+k,x_max+4+x_inc,x_min-2,y_min-2)]=top_rcv_buffer[FTNREF1D(index,1)];
+(  474)     }
+(  475)   }
+(  476) 
+(  477)  }
+(  478) 
+(  479) }
+(  480) 
+(  481) void pack_left_right_buffers_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(  482)                                 int *chnk_lft,int *chnk_rght,int *xtrnl_fc,
+(  483)                                 int *xinc,int *yinc,int *dpth,int *sz,
+(  484)                                 double *field, double *left_snd_buffer, double *right_snd_buffer)
+(  485) 
+(  486) {
+(  487)   int x_min=*xmin;
+(  488)   int x_max=*xmax;
+(  489)   int y_min=*ymin;
+(  490)   int y_max=*ymax;
+(  491)   int chunk_left=*chnk_lft;
+(  492)   int chunk_right=*chnk_rght;
+(  493)   int external_face=*xtrnl_fc;
+(  494)   int x_inc=*xinc;
+(  495)   int y_inc=*yinc;
+(  496)   int depth=*dpth;
+(  497) 
+(  498)   int j,k,index;
+(  499) 
+(  500) #pragma omp parallel
+(  501)  {
+(  502) 
+(  503)   if(chunk_left!=external_face) {
+(  504) #pragma omp for private(j,k,index)
+(  505)     for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  506) #pragma ivdep
+(  507)       for (j=1;j<=depth;j++) {
+(  508)         index=j+(k+depth-1)*depth;
+(  509)         left_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(x_min+x_inc-1+j,k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  510)       }
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 10
+
+
+(  511)     }
+(  512)   }
+(  513)   if(chunk_right!=external_face) {
+(  514) #pragma omp for private(j,k,index)
+(  515)     for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  516) #pragma ivdep
+(  517)       for (j=1;j<=depth;j++) {
+(  518)         index=j+(k+depth-1)*depth;
+(  519)         right_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(x_max+1-j,k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  520)       }
+(  521)     }
+(  522)   }
+(  523) 
+(  524)  }
+(  525) 
+(  526) }
+(  527) 
+(  528) void unpack_left_right_buffers_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(  529)                                   int *chnk_lft,int *chnk_rght,int *xtrnl_fc,
+(  530)                                   int *xinc,int *yinc,int *dpth,int *sz,
+(  531)                                   double *field, double *left_rcv_buffer, double *right_rcv_buffer)
+(  532) 
+(  533) {
+(  534)   int x_min=*xmin;
+(  535)   int x_max=*xmax;
+(  536)   int y_min=*ymin;
+(  537)   int y_max=*ymax;
+(  538)   int chunk_left=*chnk_lft;
+(  539)   int chunk_right=*chnk_rght;
+(  540)   int external_face=*xtrnl_fc;
+(  541)   int x_inc=*xinc;
+(  542)   int y_inc=*yinc;
+(  543)   int depth=*dpth;
+(  544) 
+(  545)   int j,k,index;
+(  546) 
+(  547) #pragma omp parallel
+(  548)  {
+(  549) 
+(  550)   if(chunk_left!=external_face) {
+(  551) #pragma omp for private(j,k,index)
+(  552)     for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  553) #pragma ivdep
+(  554)       for (j=1;j<=depth;j++) {
+(  555)         index=j+(k+depth-1)*depth;
+(  556)         field[FTNREF2D(x_min-j,k,x_max+4+x_inc,x_min-2,y_min-2)]=left_rcv_buffer[FTNREF1D(index,1)];
+(  557)       }
+(  558)     }
+(  559)   }
+(  560)   if(chunk_right!=external_face) {
+(  561) #pragma omp for private(j,k,index)
+(  562)     for (k=y_min-depth;k<=y_max+y_inc+depth;k++) {
+(  563) #pragma ivdep
+(  564)       for (j=1;j<=depth;j++) {
+(  565)         index=j+(k+depth-1)*depth;
+(  566)         field[FTNREF2D(x_max+x_inc+j,k,x_max+4+x_inc,x_min-2,y_min-2)]=right_rcv_buffer[FTNREF1D(index,1)];
+(  567)       }
+(  568)     }
+(  569)   }
+(  570) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 11
+
+
+(  571)  }
+(  572) 
+(  573) }
+(  574) 
+(  575) void pack_top_bottom_buffers_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(  576)                                 int *chnk_bttm,int *chnk_tp,int *xtrnl_fc,
+(  577)                                 int *xinc,int *yinc,int *dpth,int *sz,
+(  578)                                 double *field, double *bottom_snd_buffer, double *top_snd_buffer)
+(  579) 
+(  580) {
+(  581)   int x_min=*xmin;
+(  582)   int x_max=*xmax;
+(  583)   int y_min=*ymin;
+(  584)   int y_max=*ymax;
+(  585)   int chunk_top=*chnk_tp;
+(  586)   int chunk_bottom=*chnk_bttm;
+(  587)   int external_face=*xtrnl_fc;
+(  588)   int x_inc=*xinc;
+(  589)   int y_inc=*yinc;
+(  590)   int depth=*dpth;
+(  591) 
+(  592)   int j,k,index;
+(  593) 
+(  594) //#pragma omp parallel
+(  595)  {
+(  596) 
+(  597)   if(chunk_bottom!=external_face) {
+(  598)     for (k=1;k<=depth;k++) {
+(  599) #pragma omp for private(j,index)
+(  600)       for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  601)         index=j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  602)         bottom_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(j,y_min+y_inc-1+k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  603)       }
+(  604)     }
+(  605)   }
+(  606)   if(chunk_top!=external_face) {
+(  607)     for (k=1;k<=depth;k++) {
+(  608) #pragma omp for private(j,index)
+(  609)       for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  610)         index=j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  611)         top_snd_buffer[FTNREF1D(index,1)]=field[FTNREF2D(j,y_max+1-k,x_max+4+x_inc,x_min-2,y_min-2)];
+(  612)       }
+(  613)     }
+(  614)   }
+(  615) 
+(  616)  }
+(  617) 
+(  618) }
+(  619) 
+(  620) void unpack_top_bottom_buffers_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(  621)                                   int *chnk_bttm,int *chnk_tp,int *xtrnl_fc,
+(  622)                                   int *xinc,int *yinc,int *dpth,int *sz,
+(  623)                                   double *field, double *bottom_rcv_buffer, double *top_rcv_buffer)
+(  624) 
+(  625) {
+(  626)   int x_min=*xmin;
+(  627)   int x_max=*xmax;
+(  628)   int y_min=*ymin;
+(  629)   int y_max=*ymax;
+(  630)   int chunk_top=*chnk_tp;
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 12
+
+
+(  631)   int chunk_bottom=*chnk_bttm;
+(  632)   int external_face=*xtrnl_fc;
+(  633)   int x_inc=*xinc;
+(  634)   int y_inc=*yinc;
+(  635)   int depth=*dpth;
+(  636) 
+(  637)   int j,k,index;
+(  638) 
+(  639) //#pragma omp parallel
+(  640)  {
+(  641) 
+(  642)   if(chunk_bottom!=external_face) {
+(  643)     for (k=1;k<=depth;k++) {
+(  644) #pragma omp for private(j,index)
+(  645)       for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  646)         index=j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  647)         field[FTNREF2D(j,y_min-k,x_max+4+x_inc,x_min-2,y_min-2)]=bottom_rcv_buffer[FTNREF1D(index,1)];
+(  648)       }
+(  649)     }
+(  650)   }
+(  651)   if(chunk_top!=external_face) {
+(  652)     for (k=1;k<=depth;k++) {
+(  653) #pragma omp for private(j,index)
+(  654)       for (j=x_min-depth;j<=x_max+x_inc+depth;j++) {
+(  655)         index=j+depth+(k-1)*(x_max+x_inc+(2*depth));
+(  656)         field[FTNREF2D(j,y_max+y_inc+k,x_max+4+x_inc,x_min-2,y_min-2)]=top_rcv_buffer[FTNREF1D(index,1)];
+(  657)       }
+(  658)     }
+(  659)   }
+(  660) 
+(  661)  }
+(  662) 
+(  663) }
+(  664) 
+(  665) void clover_pack_message_back_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  666)                                  double *left_snd_buffer,
+(  667)                                  int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  668)                                  int *dpth, int *fld_typ,
+(  669)                                  int *bffr_ffst)
+(  670) 
+(  671) {
+(  672) }
+(  673) 
+(  674) void clover_unpack_message_back_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  675)                                  double *left_snd_buffer,
+(  676)                                  int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  677)                                  int *dpth, int *fld_typ,
+(  678)                                  int *bffr_ffst)
+(  679) 
+(  680) {
+(  681) }
+(  682) void clover_pack_message_front_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  683)                                  double *left_snd_buffer,
+(  684)                                  int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  685)                                  int *dpth, int *fld_typ,
+(  686)                                  int *bffr_ffst)
+(  687) 
+(  688) {
+(  689) }
+(  690) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 13
+
+
+(  691) void clover_unpack_message_front_c_(int *xmin,int *xmax,int *ymin,int *ymax, double *field,
+(  692)                                  double *left_snd_buffer,
+(  693)                                  int *CLL_DT,int *VRTX_DT,int *X_FC_DT,int *Y_FC_DT,
+(  694)                                  int *dpth, int *fld_typ,
+(  695)                                  int *bffr_ffst)
+(  696) 
+(  697) {
+(  698) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

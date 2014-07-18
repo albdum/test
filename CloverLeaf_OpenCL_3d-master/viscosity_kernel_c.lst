@@ -1,0 +1,198 @@
+PGC Version 13.5          07/18/2014  14:45:43      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: viscosity_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C viscosity kernel.
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details  Calculates an artificial viscosity using the Wilkin's method to
+(   22)  *  smooth out shock front and prevent oscillations around discontinuities.
+(   23)  *  Only cells in compression will have a non-zero value.
+(   24)  */
+(   25) 
+(   26) #include <stdio.h>
+(   27) #include <stdlib.h>
+(   28) #include "ftocmacros.h"
+(   29) #include <math.h>
+(   30) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 2
+
+
+(   31) void viscosity_kernel_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(   32)                       double *celldx,
+(   33)                       double *celldy,
+(   34)                       double *density0,
+(   35)                       double *pressure,
+(   36)                       double *viscosity,
+(   37)                       double *xvel0,
+(   38)                       double *yvel0)
+(   39) {
+(   40)   int x_min=*xmin;
+(   41)   int x_max=*xmax;
+(   42)   int y_min=*ymin;
+(   43)   int y_max=*ymax;
+(   44) 
+(   45)   int j,k;
+(   46)   double ugrad,vgrad,grad2,pgradx,pgrady,pgradx2,pgrady2,grad
+(   47)         ,ygrad,pgrad,xgrad,div,strain2,limiter;
+(   48) 	
+(   49) #pragma omp parallel	
+(   50)  {
+(   51) #pragma omp for private(ugrad,vgrad,div,strain2,pgradx,pgrady,pgradx2,pgrady2,limiter,pgrad,xgrad,ygrad,grad,grad2,j,k)
+(   52)   for (k=y_min;k<=y_max;k++) {
+(   53) #pragma ivdep
+(   54)     for (j=x_min;j<=x_max;j++) {
+(   55) 
+(   56)       ugrad=(xvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   57)             +xvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])
+(   58)            -(xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   59)             +xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]);
+(   60) 
+(   61)       vgrad=(yvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(   62)             +yvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])
+(   63)            -(yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   64)             +yvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]);
+(   65) 
+(   66)       div=(celldx[FTNREF1D(j,x_min-2)]*(ugrad)
+(   67)           +celldy[FTNREF1D(k,y_min-2)]*(vgrad));
+(   68) 
+(   69)       strain2=0.5*(xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(   70)                   +xvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)]
+(   71)                   -xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   72)                   -xvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)])/celldy[FTNREF1D(k,y_min-2)]
+(   73)              +0.5*(yvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   74)                   +yvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)]
+(   75)                   -yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   76)                   -yvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)])/celldx[FTNREF1D(j,x_min-2)];
+(   77) 
+(   78)       pgradx=(pressure[FTNREF2D(j+1,k  ,x_max+4,x_min-2,y_min-2)]
+(   79)              -pressure[FTNREF2D(j-1,k  ,x_max+4,x_min-2,y_min-2)])
+(   80)             /(celldx[FTNREF1D(j,x_min-2)]+celldx[FTNREF1D(j+1,x_min-2)]);
+(   81)       pgrady=(pressure[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)]
+(   82)              -pressure[FTNREF2D(j  ,k-1,x_max+4,x_min-2,y_min-2)])
+(   83)             /(celldy[FTNREF1D(k,y_min-2)]+celldy[FTNREF1D(k+1,y_min-2)]);
+(   84) 
+(   85)       pgradx2 = pgradx*pgradx;
+(   86)       pgrady2 = pgrady*pgrady;
+(   87) 
+(   88)       limiter = ((0.5*(ugrad)/celldx[FTNREF1D(j,x_min-2)])*pgradx2+(0.5*(vgrad)/celldy[FTNREF1D(k,y_min-2)])*pgrady2+strain2
+(   89)               /MAX(pgradx2+pgrady2,1.0e-16);
+(   90) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 3
+
+
+(   91)       if(limiter>0.0 || div>=0.0){
+(   92)         viscosity[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=0.0;
+(   93)       }
+(   94)       else{
+(   95)         pgradx = SIGN(MAX(1.0e-16,fabs(pgradx)),pgradx);
+(   96)         pgrady = SIGN(MAX(1.0e-16,fabs(pgrady)),pgrady);
+(   97)         pgrad = sqrt(pgradx*pgradx+pgrady*pgrady);
+(   98)         xgrad = fabs(celldx[FTNREF1D(j,x_min-2)]*pgrad/pgradx);
+(   99)         ygrad = fabs(celldy[FTNREF1D(k,y_min-2)]*pgrad/pgrady);
+(  100)         grad  = MIN(xgrad,ygrad);
+(  101)         grad2 = grad*grad;
+(  102)         viscosity[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=2.0*density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]*grad2*l
+(  103)       }
+(  104) 
+(  105)     }
+(  106)   }
+(  107) 
+(  108)  }
+(  109) 
+(  110) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

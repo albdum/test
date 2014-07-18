@@ -1,0 +1,242 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:17      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: build_field.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief  Allocates the data for each mesh chunk
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details The data fields for the mesh chunk are allocated based on the mesh
+(   21) !>  size.
+(   22) 
+(   23) MODULE build_field_module
+(   24) 
+(   25) CONTAINS
+(   26) 
+(   27) SUBROUTINE build_field(chunk,x_cells,y_cells,z_cells)
+(   28) 
+(   29)    USE clover_module
+(   30) 
+(   31)    IMPLICIT NONE
+(   32) 
+(   33)    INTEGER :: chunk,x_cells,y_cells,z_cells
+(   34) 
+(   35)    chunks(chunk)%field%x_min=1
+(   36)    chunks(chunk)%field%y_min=1
+(   37)    chunks(chunk)%field%z_min=1
+(   38) 
+(   39)    chunks(chunk)%field%x_max=x_cells
+(   40)    chunks(chunk)%field%y_max=y_cells
+(   41)    chunks(chunk)%field%z_max=z_cells
+(   42) 
+(   43)    ALLOCATE(chunks(chunk)%field%density0  (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   44)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+(   45)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   46)    ALLOCATE(chunks(chunk)%field%density1  (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   47)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+(   48)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   49)    ALLOCATE(chunks(chunk)%field%energy0   (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   50)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:17      page 2
+
+(   51)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   52)    ALLOCATE(chunks(chunk)%field%energy1   (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   53)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+(   54)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   55)    ALLOCATE(chunks(chunk)%field%pressure  (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   56)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+(   57)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   58)    ALLOCATE(chunks(chunk)%field%viscosity (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   59)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+(   60)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   61)    ALLOCATE(chunks(chunk)%field%soundspeed(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   62)                    chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2,                         &
+(   63)                    chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   64) 
+(   65)    ALLOCATE(chunks(chunk)%field%xvel0(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   66)                                       chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   67)                                       chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(   68)    ALLOCATE(chunks(chunk)%field%xvel1(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   69)                                       chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   70)                                       chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(   71)    ALLOCATE(chunks(chunk)%field%yvel0(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   72)                                       chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   73)                                       chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(   74)    ALLOCATE(chunks(chunk)%field%yvel1(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   75)                                       chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   76)                                       chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(   77)    ALLOCATE(chunks(chunk)%field%zvel0(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   78)                                       chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   79)                                       chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(   80)    ALLOCATE(chunks(chunk)%field%zvel1(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   81)                                       chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   82)                                       chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(   83) 
+(   84) 
+(   85)    ALLOCATE(chunks(chunk)%field%vol_flux_x (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   86)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(   87)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   88)    ALLOCATE(chunks(chunk)%field%mass_flux_x(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(   89)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(   90)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   91)    ALLOCATE(chunks(chunk)%field%vol_flux_y (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   92)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   93)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   94)    ALLOCATE(chunks(chunk)%field%mass_flux_y(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   95)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(   96)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(   97)    ALLOCATE(chunks(chunk)%field%vol_flux_z (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(   98)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(   99)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  100)    ALLOCATE(chunks(chunk)%field%mass_flux_z(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(  101)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(  102)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  103) 
+(  104)    ALLOCATE(chunks(chunk)%field%work_array1(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  105)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  106)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  107)    ALLOCATE(chunks(chunk)%field%work_array2(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  108)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:17      page 3
+
+(  109)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  110)    ALLOCATE(chunks(chunk)%field%work_array3(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  111)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  112)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  113)    ALLOCATE(chunks(chunk)%field%work_array4(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  114)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  115)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  116)    ALLOCATE(chunks(chunk)%field%work_array5(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  117)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  118)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  119)    ALLOCATE(chunks(chunk)%field%work_array6(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  120)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  121)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  122)    ALLOCATE(chunks(chunk)%field%work_array7(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  123)                                             chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  124)                                             chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  125) 
+(  126)    ALLOCATE(chunks(chunk)%field%cellx   (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2))
+(  127)    ALLOCATE(chunks(chunk)%field%celly   (chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2))
+(  128)    ALLOCATE(chunks(chunk)%field%cellz   (chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(  129)    ALLOCATE(chunks(chunk)%field%vertexx (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3))
+(  130)    ALLOCATE(chunks(chunk)%field%vertexy (chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3))
+(  131)    ALLOCATE(chunks(chunk)%field%vertexz (chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  132)    ALLOCATE(chunks(chunk)%field%celldx  (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2))
+(  133)    ALLOCATE(chunks(chunk)%field%celldy  (chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2))
+(  134)    ALLOCATE(chunks(chunk)%field%celldz  (chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(  135)    ALLOCATE(chunks(chunk)%field%vertexdx(chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3))
+(  136)    ALLOCATE(chunks(chunk)%field%vertexdy(chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3))
+(  137)    ALLOCATE(chunks(chunk)%field%vertexdz(chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  138)    ALLOCATE(chunks(chunk)%field%volume  (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(  139)                                          chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(  140)                                          chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(  141)    ALLOCATE(chunks(chunk)%field%xarea   (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+3, &
+(  142)                                          chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(  143)                                          chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(  144)    ALLOCATE(chunks(chunk)%field%yarea   (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(  145)                                          chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+3, &
+(  146)                                          chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+2))
+(  147)    ALLOCATE(chunks(chunk)%field%zarea   (chunks(chunk)%field%x_min-2:chunks(chunk)%field%x_max+2, &
+(  148)                                          chunks(chunk)%field%y_min-2:chunks(chunk)%field%y_max+2, &
+(  149)                                          chunks(chunk)%field%z_min-2:chunks(chunk)%field%z_max+3))
+(  150) 
+(  151)    ! Zeroing isn't strictly neccessary but it ensures physical pages
+(  152)    ! are allocated. This prevents first touch overheads in the main code
+(  153)    ! cycle which can skew timings in the first step
+(  154) !$OMP PARALLEL
+(  155)    chunks(chunk)%field%work_array1=0.0
+(  156)    chunks(chunk)%field%work_array2=0.0
+(  157)    chunks(chunk)%field%work_array3=0.0
+(  158)    chunks(chunk)%field%work_array4=0.0
+(  159)    chunks(chunk)%field%work_array5=0.0
+(  160)    chunks(chunk)%field%work_array6=0.0
+(  161)    chunks(chunk)%field%work_array7=0.0
+(  162) 
+(  163)    chunks(chunk)%field%density0=0.0
+(  164)    chunks(chunk)%field%density1=0.0
+(  165)    chunks(chunk)%field%energy0=0.0
+(  166)    chunks(chunk)%field%energy1=0.0
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:17      page 4
+
+(  167)    chunks(chunk)%field%pressure=0.0
+(  168)    chunks(chunk)%field%viscosity=0.0
+(  169)    chunks(chunk)%field%soundspeed=0.0
+(  170)    
+(  171)    chunks(chunk)%field%xvel0=0.0
+(  172)    chunks(chunk)%field%xvel1=0.0
+(  173)    chunks(chunk)%field%yvel0=0.0
+(  174)    chunks(chunk)%field%yvel1=0.0
+(  175)    chunks(chunk)%field%zvel0=0.0
+(  176)    chunks(chunk)%field%zvel1=0.0
+(  177)    
+(  178)    chunks(chunk)%field%vol_flux_x=0.0
+(  179)    chunks(chunk)%field%mass_flux_x=0.0
+(  180)    chunks(chunk)%field%vol_flux_y=0.0
+(  181)    chunks(chunk)%field%mass_flux_y=0.0
+(  182)    chunks(chunk)%field%vol_flux_z=0.0
+(  183)    chunks(chunk)%field%mass_flux_z=0.0
+(  184) 
+(  185)    chunks(chunk)%field%cellx=0.0
+(  186)    chunks(chunk)%field%celly=0.0
+(  187)    chunks(chunk)%field%cellz=0.0
+(  188)    chunks(chunk)%field%vertexx=0.0
+(  189)    chunks(chunk)%field%vertexy=0.0
+(  190)    chunks(chunk)%field%vertexz=0.0
+(  191)    chunks(chunk)%field%celldx=0.0
+(  192)    chunks(chunk)%field%celldy=0.0
+(  193)    chunks(chunk)%field%vertexdx=0.0
+(  194)    chunks(chunk)%field%vertexdy=0.0
+(  195)    chunks(chunk)%field%vertexdz=0.0
+(  196)    chunks(chunk)%field%volume=0.0
+(  197)    chunks(chunk)%field%xarea=0.0
+(  198)    chunks(chunk)%field%yarea=0.0
+(  199)    chunks(chunk)%field%zarea=0.0
+(  200) !$OMP END PARALLEL
+(  201)   
+(  202) END SUBROUTINE build_field
+(  203) 
+(  204) END MODULE build_field_module

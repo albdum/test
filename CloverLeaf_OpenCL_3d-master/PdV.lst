@@ -1,0 +1,182 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:31      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: PdV.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Driver for the PdV update.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invokes the user specified kernel for the PdV update.
+(   21) 
+(   22) MODULE PdV_module
+(   23) 
+(   24) CONTAINS
+(   25) 
+(   26) SUBROUTINE PdV(predict)
+(   27) 
+(   28)   USE clover_module
+(   29)   USE report_module
+(   30)   USE PdV_kernel_module
+(   31)   USE revert_module
+(   32)   USE update_halo_module
+(   33)   USE ideal_gas_module
+(   34) 
+(   35)   IMPLICIT NONE
+(   36) 
+(   37)   LOGICAL :: predict
+(   38) 
+(   39)   INTEGER :: prdct
+(   40) 
+(   41)   INTEGER :: c
+(   42)   INTEGER :: fields(NUM_FIELDS)
+(   43) 
+(   44)   REAL(KIND=8) :: kernel_time,timer
+(   45) 
+(   46)   error_condition=0 ! Not used yet due to issue with OpenA reduction
+(   47) 
+(   48)   IF(profiler_on) kernel_time=timer()
+(   49)   DO c=1,chunks_per_task
+(   50) 
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:31      page 2
+
+(   51)     IF(chunks(c)%task.EQ.parallel%task) THEN
+(   52) 
+(   53)       IF(use_fortran_kernels)THEN
+(   54)         CALL PdV_kernel(predict,                  &
+(   55)                       chunks(c)%field%x_min,      &
+(   56)                       chunks(c)%field%x_max,      &
+(   57)                       chunks(c)%field%y_min,      &
+(   58)                       chunks(c)%field%y_max,      &
+(   59)                       chunks(c)%field%z_min,      &
+(   60)                       chunks(c)%field%z_max,      &
+(   61)                       dt,                         &
+(   62)                       chunks(c)%field%xarea,      &
+(   63)                       chunks(c)%field%yarea,      &
+(   64)                       chunks(c)%field%zarea,      &
+(   65)                       chunks(c)%field%volume ,    &
+(   66)                       chunks(c)%field%density0,   &
+(   67)                       chunks(c)%field%density1,   &
+(   68)                       chunks(c)%field%energy0,    &
+(   69)                       chunks(c)%field%energy1,    &
+(   70)                       chunks(c)%field%pressure,   &
+(   71)                       chunks(c)%field%viscosity,  &
+(   72)                       chunks(c)%field%xvel0,      &
+(   73)                       chunks(c)%field%xvel1,      &
+(   74)                       chunks(c)%field%yvel0,      &
+(   75)                       chunks(c)%field%yvel1,      &
+(   76)                       chunks(c)%field%zvel0,      &
+(   77)                       chunks(c)%field%zvel1,      &
+(   78)                       chunks(c)%field%work_array1 )
+(   79)       ELSEIF(use_opencl_kernels)THEN
+(   80) 
+(   81) 	IF(predict) THEN
+(   82) 		prdct=1
+(   83)         ELSE
+(   84) 		prdct=0
+(   85)         ENDIF
+(   86) 
+(   87) 	CALL PdV_kernel_ocl(error_condition, prdct, dt)
+(   88) 
+(   89)       ELSEIF(use_C_kernels)THEN
+(   90) 
+(   91)         IF(predict) THEN
+(   92)           prdct=0
+(   93)         ELSE
+(   94)           prdct=1
+(   95)         ENDIF
+(   96) 
+(   97)         CALL PdV_kernel_c(prdct,                  &
+(   98)                       chunks(c)%field%x_min,      &
+(   99)                       chunks(c)%field%x_max,      &
+(  100)                       chunks(c)%field%y_min,      &
+(  101)                       chunks(c)%field%y_max,      &
+(  102)                       dt,                         &
+(  103)                       chunks(c)%field%xarea,      &
+(  104)                       chunks(c)%field%yarea,      &
+(  105)                       chunks(c)%field%volume ,    &
+(  106)                       chunks(c)%field%density0,   &
+(  107)                       chunks(c)%field%density1,   &
+(  108)                       chunks(c)%field%energy0,    &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:31      page 3
+
+(  109)                       chunks(c)%field%energy1,    &
+(  110)                       chunks(c)%field%pressure,   &
+(  111)                       chunks(c)%field%viscosity,  &
+(  112)                       chunks(c)%field%xvel0,      &
+(  113)                       chunks(c)%field%xvel1,      &
+(  114)                       chunks(c)%field%yvel0,      &
+(  115)                       chunks(c)%field%yvel1,      &
+(  116)                       chunks(c)%field%zvel0,      &
+(  117)                       chunks(c)%field%zvel1,      &
+(  118)                       chunks(c)%field%work_array1 )
+(  119)       ENDIF
+(  120)     ENDIF
+(  121) 
+(  122)   ENDDO
+(  123) 
+(  124)   CALL clover_check_error(error_condition)
+(  125)   IF(profiler_on) profiler%PdV=profiler%PdV+(timer()-kernel_time)
+(  126) 
+(  127)   IF(error_condition.EQ.1) THEN
+(  128)     CALL report_error('PdV','error in PdV')
+(  129)   ENDIF
+(  130) 
+(  131)   IF(predict)THEN
+(  132)     IF(profiler_on) kernel_time=timer()
+(  133)     DO c=1,chunks_per_task
+(  134)       CALL ideal_gas(c,.TRUE.)
+(  135)     ENDDO
+(  136)     IF(profiler_on) profiler%ideal_gas=profiler%ideal_gas+(timer()-kernel_time)
+(  137)     fields=0
+(  138)     fields(FIELD_PRESSURE)=1
+(  139)     IF(profiler_on) kernel_time=timer()
+(  140)     CALL update_halo(fields,1)
+(  141)     IF(profiler_on) profiler%halo_exchange=profiler%halo_exchange+(timer()-kernel_time)
+(  142)   ENDIF
+(  143) 
+(  144)   IF ( predict ) THEN
+(  145)     IF(profiler_on) kernel_time=timer()
+(  146)     CALL revert()
+(  147)     IF(profiler_on) profiler%revert=profiler%revert+(timer()-kernel_time)
+(  148)   ENDIF
+(  149) 
+(  150) END SUBROUTINE PdV
+(  151) 
+(  152) END MODULE PdV_module

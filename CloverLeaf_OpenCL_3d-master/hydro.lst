@@ -1,0 +1,226 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:36      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: hydro.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Controls the main hydro cycle.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Controls the top level cycle, invoking all the drivers and checks
+(   21) !>  for outputs and completion.
+(   22) 
+(   23) SUBROUTINE hydro
+(   24) 
+(   25)   USE clover_module
+(   26)   USE timestep_module
+(   27)   USE viscosity_module
+(   28)   USE PdV_module
+(   29)   USE accelerate_module
+(   30)   USE flux_calc_module
+(   31)   USE advection_module
+(   32)   USE reset_field_module
+(   33) 
+(   34)   IMPLICIT NONE
+(   35) 
+(   36)   INTEGER         :: loc(1)
+(   37)   REAL(KIND=8)    :: timer,timerstart,wall_clock,step_clock
+(   38)   
+(   39)   REAL(KIND=8)    :: grind_time,cells,rstep
+(   40)   REAL(KIND=8)    :: step_time,step_grind
+(   41)   REAL(KIND=8)    :: first_step,second_step
+(   42)   REAL(KIND=8)    :: kernel_total,totals(parallel%max_task)
+(   43) 
+(   44)   timerstart = timer()
+(   45) 
+(   46)   DO
+(   47) 
+(   48)     step_time = timer()
+(   49) 
+(   50)     step = step + 1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:36      page 2
+
+(   51) 
+(   52)     CALL timestep()
+(   53) 
+(   54)     CALL PdV(.TRUE.)
+(   55) 
+(   56)     CALL accelerate()
+(   57) 
+(   58)     CALL PdV(.FALSE.)
+(   59) 
+(   60)     CALL flux_calc()
+(   61) 
+(   62)     CALL advection()
+(   63) 
+(   64)     CALL reset_field()
+(   65) 
+(   66)     advect_x = .NOT. advect_x
+(   67)   
+(   68)     time = time + dt
+(   69) 
+(   70)     IF(summary_frequency.NE.0) THEN
+(   71)       IF(MOD(step, summary_frequency).EQ.0) CALL field_summary()
+(   72)     ENDIF
+(   73)     IF(visit_frequency.NE.0) THEN
+(   74)       IF(MOD(step, visit_frequency).EQ.0) CALL visit()
+(   75)     ENDIF
+(   76) 
+(   77)     ! Sometimes there can be a significant start up cost that appears in the first step.
+(   78)     ! Sometimes it is due to the number of MPI tasks, or OpenCL kernel compilation.
+(   79)     ! On the short test runs, this can skew the results, so should be taken into account
+(   80)     !  in recorded run times.
+(   81)     IF(step.EQ.1) first_step=(timer() - step_time)
+(   82)     IF(step.EQ.2) second_step=(timer() - step_time)
+(   83) 
+(   84)     IF(time+g_small.GT.end_time.OR.step.GE.end_step) THEN
+(   85) 
+(   86)       complete=.TRUE.
+(   87)       CALL field_summary()
+(   88)       IF(visit_frequency.NE.0) CALL visit()
+(   89) 
+(   90)       wall_clock=timer() - timerstart
+(   91)       IF ( parallel%boss ) THEN
+(   92)         WRITE(g_out,*)
+(   93)         WRITE(g_out,*) 'Calculation complete'
+(   94)         WRITE(g_out,*) 'Clover is finishing'
+(   95)         WRITE(g_out,*) 'Wall clock ', wall_clock
+(   96)         WRITE(g_out,*) 'First step overhead', first_step-second_step
+(   97)         WRITE(    0,*) 'Wall clock ', wall_clock
+(   98)         WRITE(    0,*) 'First step overhead', first_step-second_step
+(   99)       ENDIF
+(  100) 
+(  101)       IF ( profiler_on ) THEN
+(  102)         ! First we need to find the maximum kernel time for each task. This
+(  103)         ! seems to work better than finding the maximum time for each kernel and
+(  104)         ! adding it up, which always gives over 100%. I think this is because it
+(  105)         ! does not take into account compute overlaps before syncronisations
+(  106)         ! caused by halo exhanges.
+(  107)         kernel_total=profiler%timestep+profiler%ideal_gas+profiler%viscosity+profiler%PdV          &
+(  108)                     +profiler%revert+profiler%acceleration+profiler%flux+profiler%cell_advection   &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:36      page 3
+
+(  109)                     +profiler%mom_advection+profiler%reset+profiler%halo_exchange+profiler%summary &
+(  110)                     +profiler%visit
+(  111)         CALL clover_allgather(kernel_total,totals)
+(  112)         ! So then what I do is use the individual kernel times for the
+(  113)         ! maximum kernel time task for the profile print
+(  114)         loc=MAXLOC(totals)
+(  115)         kernel_total=totals(loc(1))
+(  116)         CALL clover_allgather(profiler%timestep,totals)
+(  117)         profiler%timestep=totals(loc(1))
+(  118)         CALL clover_allgather(profiler%ideal_gas,totals)
+(  119)         profiler%ideal_gas=totals(loc(1))
+(  120)         CALL clover_allgather(profiler%viscosity,totals)
+(  121)         profiler%viscosity=totals(loc(1))
+(  122)         CALL clover_allgather(profiler%PdV,totals)
+(  123)         profiler%PdV=totals(loc(1))
+(  124)         CALL clover_allgather(profiler%revert,totals)
+(  125)         profiler%revert=totals(loc(1))
+(  126)         CALL clover_allgather(profiler%acceleration,totals)
+(  127)         profiler%acceleration=totals(loc(1))
+(  128)         CALL clover_allgather(profiler%flux,totals)
+(  129)         profiler%flux=totals(loc(1))
+(  130)         CALL clover_allgather(profiler%cell_advection,totals)
+(  131)         profiler%cell_advection=totals(loc(1))
+(  132)         CALL clover_allgather(profiler%mom_advection,totals)
+(  133)         profiler%mom_advection=totals(loc(1))
+(  134)         CALL clover_allgather(profiler%reset,totals)
+(  135)         profiler%reset=totals(loc(1))
+(  136)         CALL clover_allgather(profiler%halo_exchange,totals)
+(  137)         profiler%halo_exchange=totals(loc(1))
+(  138)         CALL clover_allgather(profiler%summary,totals)
+(  139)         profiler%summary=totals(loc(1))
+(  140)         CALL clover_allgather(profiler%visit,totals)
+(  141)         profiler%visit=totals(loc(1))
+(  142) 
+(  143)         IF ( parallel%boss ) THEN
+(  144)           WRITE(g_out,*)
+(  145)           WRITE(g_out,'(a58,2f16.4)')"Profiler Output                 Time            Percentage"
+(  146)           WRITE(g_out,'(a23,2f16.4)')"Timestep              :",profiler%timestep,100.0*(profiler%timestep/wall_clock)
+(  147)           WRITE(g_out,'(a23,2f16.4)')"Ideal Gas             :",profiler%ideal_gas,100.0*(profiler%ideal_gas/wall_clock)
+(  148)           WRITE(g_out,'(a23,2f16.4)')"Viscosity             :",profiler%viscosity,100.0*(profiler%viscosity/wall_clock)
+(  149)           WRITE(g_out,'(a23,2f16.4)')"PdV                   :",profiler%PdV,100.0*(profiler%PdV/wall_clock)
+(  150)           WRITE(g_out,'(a23,2f16.4)')"Revert                :",profiler%revert,100.0*(profiler%revert/wall_clock)
+(  151)           WRITE(g_out,'(a23,2f16.4)')"Acceleration          :",profiler%acceleration,100.0*(profiler%acceleration/wall_clock)
+(  152)           WRITE(g_out,'(a23,2f16.4)')"Fluxes                :",profiler%flux,100.0*(profiler%flux/wall_clock)
+(  153)           WRITE(g_out,'(a23,2f16.4)')"Cell Advection        :",profiler%cell_advection,100.0*(profiler%cell_advection/wall_clock)
+(  154)           WRITE(g_out,'(a23,2f16.4)')"Momentum Advection    :",profiler%mom_advection,100.0*(profiler%mom_advection/wall_clock)
+(  155)           WRITE(g_out,'(a23,2f16.4)')"Reset                 :",profiler%reset,100.0*(profiler%reset/wall_clock)
+(  156)           WRITE(g_out,'(a23,2f16.4)')"Halo Exchange         :",profiler%halo_exchange,100.0*(profiler%halo_exchange/wall_clock)
+(  157)           WRITE(g_out,'(a23,2f16.4)')"Summary               :",profiler%summary,100.0*(profiler%summary/wall_clock)
+(  158)           WRITE(g_out,'(a23,2f16.4)')"Visit                 :",profiler%visit,100.0*(profiler%visit/wall_clock)
+(  159)           WRITE(g_out,'(a23,2f16.4)')"Total                 :",kernel_total,100.0*(kernel_total/wall_clock)
+(  160)           WRITE(g_out,'(a23,2f16.4)')"The Rest              :",wall_clock-kernel_total,100.0*(wall_clock-kernel_total)/wall_clock
+(  161)         ENDIF
+(  162)       ENDIF
+(  163) 
+(  164)       CALL clover_finalize
+(  165) 
+(  166)       EXIT
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:36      page 4
+
+(  167) 
+(  168)     END IF
+(  169) 
+(  170)     IF (parallel%boss) THEN
+(  171)       wall_clock=timer()-timerstart
+(  172)       step_clock=timer()-step_time
+(  173)       WRITE(g_out,*)"Wall clock ",wall_clock
+(  174)       WRITE(0    ,*)"Wall clock ",wall_clock
+(  175)       cells = grid%x_cells * grid%y_cells
+(  176)       rstep = step
+(  177)       grind_time   = wall_clock/(rstep * cells)
+(  178)       step_grind   = step_clock/cells
+(  179)       WRITE(0    ,*)"Average time per cell ",grind_time
+(  180)       WRITE(g_out,*)"Average time per cell ",grind_time
+(  181)       WRITE(0    ,*)"Step time per cell    ",step_grind
+(  182)       WRITE(g_out,*)"Step time per cell    ",step_grind
+(  183) 
+(  184)      END IF
+(  185) 
+(  186)   END DO
+(  187) 
+(  188) END SUBROUTINE hydro

@@ -1,0 +1,510 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: advec_mom_kernel.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Fortran momentum advection kernel
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Performs a second order advective remap on the vertex momentum
+(   21) !>  using van-Leer limiting and directional splitting.
+(   22) !>  Note that although pre_vol is only set and not used in the update, please
+(   23) !>  leave it in the method.
+(   24) 
+(   25) MODULE advec_mom_kernel_mod
+(   26) 
+(   27) CONTAINS
+(   28) 
+(   29) SUBROUTINE advec_mom_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
+(   30)                             xvel1,                               &
+(   31)                             yvel1,                               &
+(   32)                             zvel1,                               &
+(   33)                             mass_flux_x,                         &
+(   34)                             vol_flux_x,                          &
+(   35)                             mass_flux_y,                         &
+(   36)                             vol_flux_y,                          &
+(   37)                             mass_flux_z,                         &
+(   38)                             vol_flux_z,                          &
+(   39)                             volume,                              &
+(   40)                             density1,                            &
+(   41)                             node_flux,                           &
+(   42)                             node_mass_post,                      &
+(   43)                             node_mass_pre,                       &
+(   44)                             advec_vel,                           &
+(   45)                             mom_flux,                            &
+(   46)                             pre_vol,                             &
+(   47)                             post_vol,                            &
+(   48)                             celldx,                              &
+(   49)                             celldy,                              &
+(   50)                             celldz,                              &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 2
+
+(   51)                             advect_x,                            &
+(   52)                             which_vel,                           &
+(   53)                             sweep_number,                        &
+(   54)                             direction                            )
+(   55) 
+(   56)   IMPLICIT NONE
+(   57)   
+(   58)   INTEGER :: x_min,x_max,y_min,y_max,z_min,z_max
+(   59)   INTEGER :: which_vel,sweep_number,direction
+(   60)   LOGICAL :: advect_x
+(   61) 
+(   62)   REAL(KIND=8), TARGET,DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: xvel1,yvel1,zvel1
+(   63)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+2,z_min-2:z_max+2) :: mass_flux_x
+(   64)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+2,z_min-2:z_max+2) :: vol_flux_x
+(   65)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+3,z_min-2:z_max+2) :: mass_flux_y
+(   66)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+3,z_min-2:z_max+2) :: vol_flux_y
+(   67)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+3) :: mass_flux_z
+(   68)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+3) :: vol_flux_z
+(   69)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: volume
+(   70)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: density1
+(   71)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: node_flux
+(   72)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: node_mass_post
+(   73)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: node_mass_pre
+(   74)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: advec_vel
+(   75)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: mom_flux
+(   76)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: pre_vol
+(   77)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: post_vol
+(   78) 
+(   79)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2) :: celldx
+(   80)   REAL(KIND=8), DIMENSION(y_min-2:y_max+2) :: celldy
+(   81)   REAL(KIND=8), DIMENSION(z_min-2:z_max+2) :: celldz
+(   82)  
+(   83)   INTEGER :: j,k,l
+(   84)   INTEGER :: upwind,donor,downwind,dif
+(   85)   REAL(KIND=8) :: sigma,wind,width
+(   86)   REAL(KIND=8) :: vdiffuw,vdiffdw,auw,adw,limiter
+(   87)   REAL(KIND=8) :: vdiffuw2,vdiffdw2,auw2,limiter2
+(   88)   REAL(KIND=8), POINTER, DIMENSION(:,:,:) :: vel1
+(   89) 
+(   90)   ! Choose the correct velocity, ideally, remove this pointer
+(   91)   !  if it affects performance.
+(   92)   ! Leave this one in as a test of performance
+(   93)   IF(which_vel.EQ.1)THEN
+(   94)     vel1=>xvel1
+(   95)   ELSEIF(which_vel.EQ.2)THEN
+(   96)     vel1=>yvel1
+(   97)   ELSEIF(which_vel.EQ.3)THEN
+(   98)     vel1=>zvel1
+(   99)   ENDIF
+(  100) 
+(  101) !$OMP PARALLEL
+(  102) 
+(  103) ! I think these only have to be done once per cell advection sweep. So put in some logic so they are just done the first time
+(  104) 
+(  105)   IF(sweep_number.EQ.1.AND.direction.EQ.1)THEN ! x first
+(  106) !$OMP DO
+(  107)     DO l=z_min-2,z_max+2
+(  108)       DO k=y_min-2,y_max+2
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 3
+
+(  109)         DO j=x_min-2,x_max+2
+(  110)           post_vol(j,k,l)= volume(j,k,l)+vol_flux_y(j  ,k+1,l  )-vol_flux_y(j,k,l) &
+(  111)                                         +vol_flux_z(j  ,k  ,l+1)-vol_flux_z(j,k,l)
+(  112)           pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_x(j+1,k  ,l  )-vol_flux_x(j,k,l)
+(  113)         ENDDO
+(  114)       ENDDO
+(  115)     ENDDO
+(  116) !$OMP END DO
+(  117)   ELSEIF(sweep_number.EQ.1.AND.direction.EQ.3)THEN ! z first
+(  118) !$OMP DO
+(  119)     DO l=z_min-2,z_max+2
+(  120)       DO k=y_min-2,y_max+2
+(  121)         DO j=x_min-2,x_max+2
+(  122)           post_vol(j,k,l)= volume(j,k,l)+vol_flux_x(j+1,k  ,l  )-vol_flux_x(j,k,l) &
+(  123)                                         +vol_flux_y(j  ,k+1,l  )-vol_flux_y(j,k,l)
+(  124)           pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_z(j  ,k  ,l+1)-vol_flux_z(j,k,l)
+(  125)         ENDDO
+(  126)       ENDDO
+(  127)     ENDDO
+(  128) !$OMP END DO
+(  129)   ELSEIF(sweep_number.EQ.2.AND.advect_x)THEN ! x first
+(  130) !$OMP DO
+(  131)     DO l=z_min-2,z_max+2
+(  132)       DO k=y_min-2,y_max+2
+(  133)         DO j=x_min-2,x_max+2
+(  134)           post_vol(j,k,l)=volume(j,k,l) +vol_flux_z(j  ,k  ,l+1)-vol_flux_z(j,k,l)
+(  135)           pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_y(j  ,k+1,l  )-vol_flux_y(j,k,l)
+(  136)         ENDDO
+(  137)       ENDDO
+(  138)     ENDDO
+(  139) !$OMP END DO
+(  140)   ELSEIF(sweep_number.EQ.2.AND..NOT.advect_x)THEN ! Z first
+(  141) !$OMP DO
+(  142)     DO l=z_min-2,z_max+2
+(  143)       DO k=y_min-2,y_max+2
+(  144)         DO j=x_min-2,x_max+2
+(  145)           post_vol(j,k,l)=volume(j,k,l) +vol_flux_x(j+1,k  ,l  )-vol_flux_x(j,k,l)
+(  146)           pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_y(j  ,k+1,l  )-vol_flux_y(j,k,l)
+(  147)         ENDDO
+(  148)       ENDDO
+(  149)     ENDDO
+(  150) !$OMP END DO
+(  151)   ELSEIF(sweep_number.EQ.3.AND.direction.EQ.1)THEN ! z first
+(  152) !$OMP DO
+(  153)     DO l=z_min-2,z_max+2
+(  154)       DO k=y_min-2,y_max+2
+(  155)         DO j=x_min-2,x_max+2
+(  156)           post_vol(j,k,l)=volume(j,k,l)
+(  157)           pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_x(j+1,k  ,l  )-vol_flux_x(j,k,l)
+(  158)         ENDDO
+(  159)       ENDDO
+(  160)     ENDDO
+(  161) !$OMP END DO
+(  162)   ELSEIF(sweep_number.EQ.3.AND.direction.EQ.3)THEN ! x first
+(  163) !$OMP DO
+(  164)     DO l=z_min-2,z_max+2
+(  165)       DO k=y_min-2,y_max+2
+(  166)         DO j=x_min-2,x_max+2
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 4
+
+(  167)           post_vol(j,k,l)=volume(j,k,l)
+(  168)           pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_z(j  ,k  ,l+1)-vol_flux_z(j,k,l)
+(  169)         ENDDO
+(  170)       ENDDO
+(  171)     ENDDO
+(  172) !$OMP END DO
+(  173)   ENDIF
+(  174) 
+(  175)   IF(direction.EQ.1)THEN
+(  176)     IF(which_vel.EQ.1) THEN
+(  177) !$OMP DO
+(  178)       DO l=z_min,z_max+1
+(  179)         DO k=y_min,y_max+1
+(  180)           DO j=x_min-2,x_max+2
+(  181)             ! Find staggered mesh mass fluxes, nodal masses and volumes.
+(  182)             node_flux(j,k,l)=0.125_8*(mass_flux_x(j  ,k-1,l  )+mass_flux_x(j  ,k,l  )  &
+(  183)                                      +mass_flux_x(j+1,k-1,l  )+mass_flux_x(j+1,k,l  )  &
+(  184)                                      +mass_flux_x(j  ,k-1,l-1)+mass_flux_x(j  ,k,l-1)  &
+(  185)                                      +mass_flux_x(j+1,k-1,l-1)+mass_flux_x(j+1,k,l-1))
+(  186)           ENDDO
+(  187)         ENDDO
+(  188)       ENDDO
+(  189) !$OMP END DO
+(  190) !And do I need to calc the node mass for all 3 directions, or just once?
+(  191) !$OMP DO
+(  192)       DO l=z_min,z_max+1
+(  193)         DO k=y_min,y_max+1
+(  194)           DO j=x_min-1,x_max+2
+(  195)             ! Staggered cell mass post advection
+(  196)             node_mass_post(j,k,l)=0.125_8*(density1(j  ,k-1,l  )*post_vol(j  ,k-1,l  )                   &
+(  197)                                           +density1(j  ,k  ,l  )*post_vol(j  ,k  ,l  )                   &
+(  198)                                           +density1(j-1,k-1,l  )*post_vol(j-1,k-1,l  )                   &
+(  199)                                           +density1(j-1,k  ,l  )*post_vol(j-1,k  ,l  )                   &
+(  200)                                           +density1(j  ,k-1,l-1)*post_vol(j  ,k-1,l-1)                   &
+(  201)                                           +density1(j  ,k  ,l-1)*post_vol(j  ,k  ,l-1)                   &
+(  202)                                           +density1(j-1,k-1,l-1)*post_vol(j-1,k-1,l-1)                   &
+(  203)                                           +density1(j-1,k  ,l-1)*post_vol(j-1,k  ,l-1))
+(  204)           ENDDO
+(  205)         ENDDO
+(  206)       ENDDO
+(  207) !$OMP END DO
+(  208) !$OMP DO
+(  209)       DO l=z_min,z_max+1
+(  210)         DO k=y_min,y_max+1
+(  211)           DO j=x_min-1,x_max+2
+(  212)             ! Staggered cell mass pre advection
+(  213)             node_mass_pre(j,k,l)=node_mass_post(j,k,l)-node_flux(j-1,k,l)+node_flux(j,k,l)
+(  214)           ENDDO
+(  215)         ENDDO
+(  216)       ENDDO
+(  217) !$OMP END DO
+(  218)     ENDIF
+(  219) 
+(  220) !$OMP DO PRIVATE(upwind,downwind,donor,dif,sigma,width,limiter,vdiffuw,vdiffdw,auw,adw,wind)
+(  221)     DO l=z_min,z_max+1
+(  222)       DO k=y_min,y_max+1
+(  223)         DO j=x_min-1,x_max+1
+(  224)           IF(node_flux(j,k,l).LT.0.0)THEN
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 5
+
+(  225)             upwind=j+2
+(  226)             donor=j+1
+(  227)             downwind=j
+(  228)             dif=donor
+(  229)           ELSE
+(  230)             upwind=j-1
+(  231)             donor=j
+(  232)             downwind=j+1
+(  233)             dif=upwind
+(  234)           ENDIF
+(  235)           sigma=ABS(node_flux(j,k,l))/(node_mass_pre(donor,k,l))
+(  236)           width=celldx(j)
+(  237)           vdiffuw=vel1(donor,k,l)-vel1(upwind,k,l)
+(  238)           vdiffdw=vel1(downwind,k,l)-vel1(donor,k,l)
+(  239)           limiter=0.0
+(  240)           IF(vdiffuw*vdiffdw.GT.0.0)THEN
+(  241)             auw=ABS(vdiffuw)
+(  242)             adw=ABS(vdiffdw)
+(  243)             wind=1.0_8
+(  244)             IF(vdiffdw.LE.0.0) wind=-1.0_8
+(  245)             limiter=wind*MIN(width*((2.0_8-sigma)*adw/width+(1.0_8+sigma)*auw/celldx(dif))/6.0_8,auw,adw)
+(  246)           ENDIF
+(  247)           advec_vel(j,k,l)=vel1(donor,k,l)+(1.0-sigma)*limiter
+(  248)           mom_flux(j,k,l)=advec_vel(j,k,l)*node_flux(j,k,l)
+(  249)         ENDDO
+(  250)       ENDDO
+(  251)     ENDDO
+(  252) !$OMP END DO
+(  253) 
+(  254) !$OMP DO
+(  255)     DO l=z_min,z_max+1
+(  256)       DO k=y_min,y_max+1
+(  257)         DO j=x_min,x_max+1
+(  258)           vel1 (j,k,l)=(vel1 (j,k,l)*node_mass_pre(j,k,l)+mom_flux(j-1,k,l)-mom_flux(j,k,l))/node_mass_post(j,k,l)
+(  259)         ENDDO
+(  260)       ENDDO
+(  261)     ENDDO
+(  262) !$OMP END DO
+(  263)   ELSEIF(direction.EQ.2)THEN
+(  264)     IF(which_vel.EQ.1)THEN
+(  265) !$OMP DO
+(  266)       DO l=z_min,z_max+1
+(  267)         DO k=y_min-2,y_max+2
+(  268)           DO j=x_min,x_max+1
+(  269)             ! Find staggered mesh mass fluxes and nodal masses and volumes.
+(  270)             node_flux(j,k,l)=0.125_8*(mass_flux_y(j-1,k  ,l  )+mass_flux_y(j  ,k  ,l  ) &
+(  271)                                      +mass_flux_y(j-1,k+1,l  )+mass_flux_y(j  ,k+1,l  ) &
+(  272)                                      +mass_flux_y(j-1,k  ,l-1)+mass_flux_y(j  ,k  ,l-1) &
+(  273)                                      +mass_flux_y(j-1,k+1,l-1)+mass_flux_y(j  ,k+1,l-1))
+(  274)           ENDDO
+(  275)         ENDDO
+(  276)       ENDDO
+(  277) !$OMP END DO
+(  278) !$OMP DO
+(  279)       DO l=z_min,z_max+1
+(  280)         DO k=y_min-1,y_max+2
+(  281)           DO j=x_min,x_max+1
+(  282)             node_mass_post(j,k,l)=0.125_8*(density1(j  ,k-1,l  )*post_vol(j  ,k-1,l  )                     &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 6
+
+(  283)                                           +density1(j  ,k  ,l  )*post_vol(j  ,k  ,l  )                     &
+(  284)                                           +density1(j-1,k-1,l  )*post_vol(j-1,k-1,l  )                     &
+(  285)                                           +density1(j-1,k  ,l  )*post_vol(j-1,k  ,l  )                     &
+(  286)                                           +density1(j  ,k-1,l-1)*post_vol(j  ,k-1,l-1)                     &
+(  287)                                           +density1(j  ,k  ,l-1)*post_vol(j  ,k  ,l-1)                     &
+(  288)                                           +density1(j-1,k-1,l-1)*post_vol(j-1,k-1,l-1)                     &
+(  289)                                           +density1(j-1,k  ,l-1)*post_vol(j-1,k  ,l-1))
+(  290)           ENDDO
+(  291)         ENDDO
+(  292)       ENDDO
+(  293) !$OMP END DO
+(  294) !$OMP DO
+(  295)       DO l=z_min,z_max+1
+(  296)         DO k=y_min-1,y_max+2
+(  297)           DO j=x_min,x_max+1
+(  298)             node_mass_pre(j,k,l)=node_mass_post(j,k,l)-node_flux(j,k-1,l)+node_flux(j,k,l)
+(  299)           ENDDO
+(  300)         ENDDO
+(  301)       ENDDO
+(  302) !$OMP END DO
+(  303)     ENDIF
+(  304) !$OMP DO PRIVATE(upwind,donor,downwind,dif,sigma,width,limiter,vdiffuw,vdiffdw,auw,adw,wind)
+(  305)     DO l=z_min,z_max+1
+(  306)       DO k=y_min-1,y_max+1
+(  307)         DO j=x_min,x_max+1
+(  308)           IF(node_flux(j,k,l).LT.0.0)THEN
+(  309)             upwind=k+2
+(  310)             donor=k+1
+(  311)             downwind=k
+(  312)             dif=donor
+(  313)           ELSE
+(  314)             upwind=k-1
+(  315)             donor=k
+(  316)             downwind=k+1
+(  317)             dif=upwind
+(  318)           ENDIF
+(  319) 
+(  320)           sigma=ABS(node_flux(j,k,l))/(node_mass_pre(j,donor,l))
+(  321)           width=celldy(k)
+(  322)           vdiffuw=vel1(j,donor,l)-vel1(j,upwind,l)
+(  323)           vdiffdw=vel1(j,downwind,l)-vel1(j,donor,l)
+(  324)           limiter=0.0
+(  325)           IF(vdiffuw*vdiffdw.GT.0.0)THEN
+(  326)             auw=ABS(vdiffuw)
+(  327)             adw=ABS(vdiffdw)
+(  328)             wind=1.0_8
+(  329)             IF(vdiffdw.LE.0.0) wind=-1.0_8
+(  330)             limiter=wind*MIN(width*((2.0_8-sigma)*adw/width+(1.0_8+sigma)*auw/celldy(dif))/6.0_8,auw,adw)
+(  331)           ENDIF
+(  332)           advec_vel(j,k,l)=vel1(j,donor,l)+(1.0_8-sigma)*limiter
+(  333)           mom_flux(j,k,l)=advec_vel(j,k,l)*node_flux(j,k,l)
+(  334)         ENDDO
+(  335)       ENDDO
+(  336)     ENDDO
+(  337) !$OMP END DO
+(  338)  
+(  339) !$OMP DO
+(  340)     DO l=z_min,z_max+1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 7
+
+(  341)       DO k=y_min,y_max+1
+(  342)         DO j=x_min,x_max+1
+(  343)           vel1 (j,k,l)=(vel1(j,k,l)*node_mass_pre(j,k,l)+mom_flux(j,k-1,l)-mom_flux(j,k,l))/node_mass_post(j,k,l)
+(  344)         ENDDO
+(  345)       ENDDO
+(  346)     ENDDO
+(  347) !$OMP END DO
+(  348)   ELSEIF(direction.EQ.3)THEN
+(  349)     IF(which_vel.EQ.1) THEN
+(  350) !$OMP DO
+(  351)       DO l=z_min-2,z_max+2
+(  352)         DO k=y_min,y_max+1
+(  353)           DO j=x_min,x_max+1
+(  354)             ! Find staggered mesh mass fluxes and nodal masses and volumes.
+(  355)             node_flux(j,k,l)=0.125_8*(mass_flux_z(j-1,k  ,l  )+mass_flux_z(j  ,k  ,l  ) &
+(  356)                                      +mass_flux_z(j-1,k  ,l+1)+mass_flux_z(j  ,k  ,l+1) &
+(  357)                                      +mass_flux_z(j-1,k-1,l  )+mass_flux_z(j  ,k-1,l  ) &
+(  358)                                      +mass_flux_z(j-1,k-1,l+1)+mass_flux_z(j  ,k-1,l+1))
+(  359)           ENDDO
+(  360)         ENDDO
+(  361)       ENDDO
+(  362) !$OMP END DO
+(  363) !$OMP DO
+(  364)       DO l=z_min-1,z_max+2
+(  365)         DO k=y_min,y_max+1
+(  366)           DO j=x_min,x_max+1
+(  367)             node_mass_post(j,k,l)=0.125_8*(density1(j  ,k-1,l  )*post_vol(j  ,k-1,l  )                     &
+(  368)                                           +density1(j  ,k  ,l  )*post_vol(j  ,k  ,l  )                     &
+(  369)                                           +density1(j-1,k-1,l  )*post_vol(j-1,k-1,l  )                     &
+(  370)                                           +density1(j-1,k  ,l  )*post_vol(j-1,k  ,l  )                     &
+(  371)                                           +density1(j  ,k-1,l-1)*post_vol(j  ,k-1,l-1)                     &
+(  372)                                           +density1(j  ,k  ,l-1)*post_vol(j  ,k  ,l-1)                     &
+(  373)                                           +density1(j-1,k-1,l-1)*post_vol(j-1,k-1,l-1)                     &
+(  374)                                           +density1(j-1,k  ,l-1)*post_vol(j-1,k  ,l-1))
+(  375)           ENDDO
+(  376)         ENDDO
+(  377)       ENDDO
+(  378) !$OMP END DO
+(  379) !$OMP DO
+(  380)       DO l=z_min-1,z_max+2
+(  381)         DO k=y_min,y_max+1
+(  382)           DO j=x_min,x_max+1
+(  383)             ! Staggered cell mass pre advection
+(  384)             node_mass_pre(j,k,l)=node_mass_post(j,k,l)-node_flux(j,k,l-1)+node_flux(j,k,l)
+(  385)           ENDDO
+(  386)         ENDDO
+(  387)       ENDDO
+(  388) !$OMP END DO
+(  389)     ENDIF
+(  390) !$OMP DO PRIVATE(upwind,donor,downwind,dif,sigma,width,limiter,vdiffuw,vdiffdw,auw,adw,wind)
+(  391)     DO l=z_min-1,z_max+1
+(  392)       DO k=y_min,y_max+1
+(  393)         DO j=x_min,x_max+1
+(  394)           IF(node_flux(j,k,l).LT.0.0)THEN
+(  395)             upwind=l+2
+(  396)             donor=l+1
+(  397)             downwind=l
+(  398)             dif=donor
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 8
+
+(  399)           ELSE
+(  400)             upwind=l-1
+(  401)             donor=l
+(  402)             downwind=l+1
+(  403)             dif=upwind
+(  404)           ENDIF
+(  405) 
+(  406)           sigma=ABS(node_flux(j,k,l))/(node_mass_pre(j,k,donor))
+(  407)           width=celldz(l)
+(  408)           vdiffuw=vel1(j,k,donor)-vel1(j,k,upwind)
+(  409)           vdiffdw=vel1(j,k,downwind)-vel1(j,k,donor)
+(  410)           limiter=0.0
+(  411)           IF(vdiffuw*vdiffdw.GT.0.0)THEN
+(  412)             auw=ABS(vdiffuw)
+(  413)             adw=ABS(vdiffdw)
+(  414)             wind=1.0_8
+(  415)             IF(vdiffdw.LE.0.0) wind=-1.0_8
+(  416)             limiter=wind*MIN(width*((2.0_8-sigma)*adw/width+(1.0_8+sigma)*auw/celldz(dif))/6.0_8,auw,adw)
+(  417)           ENDIF
+(  418)           advec_vel(j,k,l)=vel1(j,k,donor)+(1.0_8-sigma)*limiter
+(  419)           mom_flux(j,k,l)=advec_vel(j,k,l)*node_flux(j,k,l)
+(  420)         ENDDO
+(  421)       ENDDO
+(  422)     ENDDO
+(  423) !$OMP END DO
+(  424)  
+(  425) !$OMP DO
+(  426)     DO l=z_min,z_max+1
+(  427)       DO k=y_min,y_max+1
+(  428)         DO j=x_min,x_max+1
+(  429)           vel1 (j,k,l)=(vel1(j,k,l)*node_mass_pre(j,k,l)+mom_flux(j,k,l-1)-mom_flux(j,k,l))/node_mass_post(j,k,l)
+(  430)         ENDDO
+(  431)       ENDDO
+(  432)     ENDDO
+(  433) !$OMP END DO
+(  434)   ENDIF
+(  435) 
+(  436) !$OMP END PARALLEL
+(  437) 
+(  438) END SUBROUTINE advec_mom_kernel
+(  439) 
+(  440) END MODULE advec_mom_kernel_mod

@@ -1,0 +1,132 @@
+PGC Version 13.5          07/18/2014  14:45:39      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: timer_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C timer function.
+(   20)  *  @author Oliver Perks
+(   21)  *  @details C function to call from fortran.
+(   22)  */
+(   23) 
+(   24) #include <sys/time.h>
+(   25) #include <sys/times.h>
+(   26) #include <sys/resource.h>
+(   27) #include <stdlib.h>
+(   28) 
+(   29) void timer_c_( double *elapsed_time);
+(   30) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:39      page 2
+
+
+(   31) 
+(   32) void timer_c_( double *elapsed_time)
+(   33) {
+(   34)    struct timeval t;
+(   35)    gettimeofday(&t, (struct timezone *) NULL);
+(   36)    *elapsed_time = t.tv_sec + t.tv_usec * 1.0E-6;
+(   37)          
+(   38) }
+(   39) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

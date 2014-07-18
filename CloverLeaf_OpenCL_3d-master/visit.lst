@@ -1,0 +1,238 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:37      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: visit.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Generates graphics output files.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details The field data over all mesh chunks is written to a .vtk files and
+(   21) !>  the .visit file is written that defines the time for each set of vtk files.
+(   22) !>  The ideal gas and viscosity routines are invoked to make sure this data is
+(   23) !>  up to data with the current energy, density and velocity.
+(   24) 
+(   25) SUBROUTINE visit
+(   26) 
+(   27)   USE clover_module
+(   28)   USE update_halo_module
+(   29)   USE viscosity_module
+(   30)   USE ideal_gas_module
+(   31) 
+(   32)   IMPLICIT NONE
+(   33) 
+(   34)   INTEGER :: j,k,l,c,err,get_unit,u,dummy
+(   35)   INTEGER :: nxc,nyc,nzc,nxv,nyv,nzv,nblocks
+(   36)   REAL(KIND=8)    :: temp_var
+(   37) 
+(   38)   CHARACTER(len=80)           :: name
+(   39)   CHARACTER(len=10)           :: chunk_name,step_name
+(   40)   CHARACTER(len=90)           :: filename
+(   41) 
+(   42)   LOGICAL, SAVE :: first_call=.TRUE.
+(   43) 
+(   44)   INTEGER :: fields(NUM_FIELDS)
+(   45) 
+(   46)   REAL(KIND=8) :: kernel_time,timer
+(   47) 
+(   48)   name = 'clover'
+(   49)   IF ( parallel%boss ) THEN
+(   50)     IF(first_call) THEN
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:37      page 2
+
+(   51) 
+(   52)       nblocks=number_of_chunks
+(   53)       filename = "clover.visit"
+(   54)       u=get_unit(dummy)
+(   55)       OPEN(UNIT=u,FILE=filename,STATUS='UNKNOWN',IOSTAT=err)
+(   56)       WRITE(u,'(a,i5)')'!NBLOCKS ',nblocks
+(   57)       CLOSE(u)
+(   58) 
+(   59)       first_call=.FALSE.
+(   60) 
+(   61)     ENDIF
+(   62)   ENDIF
+(   63) 
+(   64)   IF(profiler_on) kernel_time=timer()
+(   65)   DO c=1,chunks_per_task
+(   66)     CALL ideal_gas(c,.FALSE.)
+(   67)   ENDDO
+(   68)   IF(profiler_on) profiler%ideal_gas=profiler%ideal_gas+(timer()-kernel_time)
+(   69) 
+(   70)   fields=0
+(   71)   fields(FIELD_PRESSURE)=1
+(   72)   fields(FIELD_XVEL0)=1
+(   73)   fields(FIELD_YVEL0)=1
+(   74)   fields(FIELD_ZVEL0)=1
+(   75)   IF(profiler_on) kernel_time=timer()
+(   76)   CALL update_halo(fields,1)
+(   77)   IF(profiler_on) profiler%halo_exchange=profiler%halo_exchange+(timer()-kernel_time)
+(   78) 
+(   79)   IF(profiler_on) kernel_time=timer()
+(   80)   CALL viscosity()
+(   81)   IF(profiler_on) profiler%viscosity=profiler%viscosity+(timer()-kernel_time)
+(   82)   IF ( parallel%boss ) THEN
+(   83) 
+(   84)     filename = "clover.visit"
+(   85)     u=get_unit(dummy)
+(   86)     OPEN(UNIT=u,FILE=filename,STATUS='UNKNOWN',POSITION='APPEND',IOSTAT=err)
+(   87) 
+(   88)     DO c = 1, number_of_chunks
+(   89)       WRITE(chunk_name, '(i6)') c+100000
+(   90)       chunk_name(1:1) = "."
+(   91)       WRITE(step_name, '(i6)') step+100000
+(   92)       step_name(1:1) = "."
+(   93)       filename = trim(trim(name) //trim(chunk_name)//trim(step_name))//".vtk"
+(   94)       WRITE(u,'(a)')TRIM(filename)
+(   95)     ENDDO
+(   96)     CLOSE(u)
+(   97) 
+(   98)   ENDIF
+(   99) 
+(  100)   IF(profiler_on) kernel_time=timer()
+(  101)   DO c = 1, chunks_per_task
+(  102)     IF(chunks(c)%task.EQ.parallel%task) THEN
+(  103)       nxc=chunks(c)%field%x_max-chunks(c)%field%x_min+1
+(  104)       nyc=chunks(c)%field%y_max-chunks(c)%field%y_min+1
+(  105)       nzc=chunks(c)%field%z_max-chunks(c)%field%z_min+1
+(  106)       nxv=nxc+1
+(  107)       nyv=nyc+1
+(  108)       nzv=nzc+1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:37      page 3
+
+(  109)       WRITE(chunk_name, '(i6)') parallel%task+100001
+(  110)       chunk_name(1:1) = "."
+(  111)       WRITE(step_name, '(i6)') step+100000
+(  112)       step_name(1:1) = "."
+(  113)       filename = trim(trim(name) //trim(chunk_name)//trim(step_name))//".vtk"
+(  114)       u=get_unit(dummy)
+(  115)       OPEN(UNIT=u,FILE=filename,STATUS='UNKNOWN',IOSTAT=err)
+(  116)       WRITE(u,'(a)')'# vtk DataFile Version 3.0'
+(  117)       WRITE(u,'(a)')'vtk output'
+(  118)       WRITE(u,'(a)')'ASCII'
+(  119)       WRITE(u,'(a)')'DATASET RECTILINEAR_GRID'
+(  120)       WRITE(u,'(a,3i12)')'DIMENSIONS',nxv,nyv,nzv
+(  121)       WRITE(u,'(a,i5,a)')'X_COORDINATES ',nxv,' double'
+(  122)       DO j=chunks(c)%field%x_min,chunks(c)%field%x_max+1
+(  123)         WRITE(u,'(e12.4)')chunks(c)%field%vertexx(j)
+(  124)       ENDDO
+(  125)       WRITE(u,'(a,i5,a)')'Y_COORDINATES ',nyv,' double'
+(  126)       DO k=chunks(c)%field%y_min,chunks(c)%field%y_max+1
+(  127)         WRITE(u,'(e12.4)')chunks(c)%field%vertexy(k)
+(  128)       ENDDO
+(  129)       WRITE(u,'(a,i5,a)')'Z_COORDINATES ',nzv,' double'
+(  130)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max+1
+(  131)         WRITE(u,'(e12.4)')chunks(c)%field%vertexz(l)
+(  132)       ENDDO
+(  133)       WRITE(u,'(a,i20)')'CELL_DATA ',nxc*nyc*nzc
+(  134)       WRITE(u,'(a)')'FIELD FieldData 4'
+(  135)       WRITE(u,'(a,i20,a)')'density 1 ',nxc*nyc*nzc,' double'
+(  136)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max
+(  137)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max
+(  138)           WRITE(u,'(e12.4)')(chunks(c)%field%density0(j,k,l),j=chunks(c)%field%x_min,chunks(c)%field%x_max)
+(  139)         ENDDO
+(  140)       ENDDO
+(  141)       WRITE(u,'(a,i20,a)')'energy 1 ',nxc*nyc*nzc,' double'
+(  142)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max
+(  143)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max
+(  144)           WRITE(u,'(e12.4)')(chunks(c)%field%energy0(j,k,l),j=chunks(c)%field%x_min,chunks(c)%field%x_max)
+(  145)         ENDDO
+(  146)       ENDDO
+(  147)       WRITE(u,'(a,i20,a)')'pressure 1 ',nxc*nyc*nzc,' double'
+(  148)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max
+(  149)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max
+(  150)           WRITE(u,'(e12.4)')(chunks(c)%field%pressure(j,k,l),j=chunks(c)%field%x_min,chunks(c)%field%x_max)
+(  151)         ENDDO
+(  152)       ENDDO
+(  153)       WRITE(u,'(a,i20,a)')'viscosity 1 ',nxc*nyc*nzc,' double'
+(  154)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max
+(  155)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max
+(  156)           DO j=chunks(c)%field%x_min,chunks(c)%field%x_max
+(  157)             temp_var=0.0
+(  158)             IF(chunks(c)%field%viscosity(j,k,l).GT.0.00000001) temp_var=chunks(c)%field%viscosity(j,k,l)
+(  159)             WRITE(u,'(e12.4)') temp_var
+(  160)           ENDDO
+(  161)         ENDDO
+(  162)       ENDDO
+(  163)       WRITE(u,'(a,i20)')'POINT_DATA ',nxv*nyv*nzv
+(  164)       WRITE(u,'(a)')'FIELD FieldData 3'
+(  165)       WRITE(u,'(a,i20,a)')'x_vel 1 ',nxv*nyv*nzv,' double'
+(  166)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max+1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:37      page 4
+
+(  167)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max+1
+(  168)           DO j=chunks(c)%field%x_min,chunks(c)%field%x_max+1
+(  169)             temp_var=0.0
+(  170)             IF(ABS(chunks(c)%field%xvel0(j,k,l)).GT.0.00000001) temp_var=chunks(c)%field%xvel0(j,k,l)
+(  171)             WRITE(u,'(e12.4)') temp_var
+(  172)           ENDDO
+(  173)         ENDDO
+(  174)       ENDDO
+(  175)       WRITE(u,'(a,i20,a)')'y_vel 1 ',nxv*nyv*nzv,' double'
+(  176)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max+1
+(  177)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max+1
+(  178)           DO j=chunks(c)%field%x_min,chunks(c)%field%x_max+1
+(  179)             temp_var=0.0
+(  180)             IF(ABS(chunks(c)%field%yvel0(j,k,l)).GT.0.00000001) temp_var=chunks(c)%field%yvel0(j,k,l)
+(  181)             WRITE(u,'(e12.4)') temp_var
+(  182)           ENDDO
+(  183)         ENDDO
+(  184)       ENDDO
+(  185)       WRITE(u,'(a,i20,a)')'z_vel 1 ',nxv*nyv*nzv,' double'
+(  186)       DO l=chunks(c)%field%z_min,chunks(c)%field%z_max+1
+(  187)         DO k=chunks(c)%field%y_min,chunks(c)%field%y_max+1
+(  188)           DO j=chunks(c)%field%x_min,chunks(c)%field%x_max+1
+(  189)             temp_var=0.0
+(  190)             IF(ABS(chunks(c)%field%zvel0(j,k,l)).GT.0.00000001) temp_var=chunks(c)%field%zvel0(j,k,l)
+(  191)             WRITE(u,'(e12.4)') temp_var
+(  192)           ENDDO
+(  193)         ENDDO
+(  194)       ENDDO
+(  195)       CLOSE(u)
+(  196)     ENDIF
+(  197)   ENDDO
+(  198)   IF(profiler_on) profiler%visit=profiler%visit+(timer()-kernel_time)
+(  199) 
+(  200) END SUBROUTINE visit

@@ -1,0 +1,264 @@
+PGC Version 13.5          07/18/2014  14:45:39      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: calc_dt_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C timestep kernel
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details calculates the minimum timestep on the mesh chunk based on the CFL
+(   22)  *  condition, the velocity gradient and the velocity divergence. A safety
+(   23)  *  factor is used to ensure numerical stability.
+(   24)  */
+(   25) 
+(   26) #include <stdio.h>
+(   27) #include <stdlib.h>
+(   28) #include "ftocmacros.h"
+(   29) #include <math.h>
+(   30) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:39      page 2
+
+
+(   31) void calc_dt_kernel_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(   32)                     double *gsmall,double *gbig,double *mindt,
+(   33)                     double *dtcsafe,
+(   34)                     double *dtusafe,
+(   35)                     double *dtvsafe,
+(   36)                     double *dtdivsafe,
+(   37)                     double *xarea,
+(   38)                     double *yarea,
+(   39)                     double *cellx,
+(   40)                     double *celly,
+(   41)                     double *celldx,
+(   42)                     double *celldy,
+(   43)                     double *volume,
+(   44)                     double *density0,
+(   45)                     double *energy0,
+(   46)                     double *pressure,
+(   47)                     double *viscosity,
+(   48)                     double *soundspeed,
+(   49)                     double *xvel0,
+(   50) 		    double *yvel0,
+(   51)                     double *dt_min,
+(   52)                     double *dtminval,
+(   53)                     int *dtlcontrol,
+(   54)                     double *xlpos,
+(   55)                     double *ylpos,
+(   56)                     int *jldt,
+(   57)                     int *kldt,
+(   58)                     int *smll)
+(   59) {
+(   60) 
+(   61)   int  x_min=*xmin;
+(   62)   int  x_max=*xmax;
+(   63)   int  y_min=*ymin;
+(   64)   int  y_max=*ymax;
+(   65) 
+(   66)   double g_small=*gsmall;
+(   67)   double g_big=*gbig;
+(   68)   double dt_min_val=*dtminval;
+(   69)   double dtc_safe=*dtcsafe;
+(   70)   double dtu_safe=*dtusafe;
+(   71)   double dtv_safe=*dtvsafe;
+(   72)   double dtdiv_safe=*dtdivsafe;
+(   73)   double min_dt=*mindt;
+(   74) 
+(   75)   int dtl_control=*dtlcontrol;
+(   76)   double xl_pos=*xlpos;
+(   77)   double yl_pos=*ylpos;
+(   78)   int j_ldt=*jldt;
+(   79)   int k_ldt=*kldt;
+(   80)   int small=*smll;
+(   81) 
+(   82)   int j,k;
+(   83) 
+(   84)   double div,dsx,dsy,dtut,dtvt,dtct,dtdivt,cc,dv1,dv2,jk_control;
+(   85) 
+(   86)   small=0;
+(   87) 
+(   88)   dt_min_val = g_big;
+(   89)   jk_control=1.1;
+(   90) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:39      page 3
+
+
+(   91) #pragma omp parallel
+(   92)  {
+(   93) 
+(   94) #pragma omp for private(dsx,dsy,cc,dv1,dv2,div,dtct,dtut,dtvt,dtdivt,j,k)
+(   95)   for (k=y_min;k<=y_max;k++) {
+(   96) #pragma ivdep
+(   97)     for (j=x_min;j<=x_max;j++) {
+(   98) 
+(   99)        dsx=celldx[FTNREF1D(j,x_min-2)];
+(  100)        dsy=celldy[FTNREF1D(k,y_min-2)];
+(  101) 
+(  102)        cc=soundspeed[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]*soundspeed[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)];
+(  103)        cc=cc+2.0*viscosity[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]/density0[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)];
+(  104)        cc=MAX(sqrt(cc),g_small);
+(  105) 
+(  106)        dtct=dtc_safe*MIN(dsx,dsy)/cc;
+(  107) 
+(  108)        div=0.0;
+(  109) 
+(  110)        dv1=(xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]+xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)])*xarea[FTNREF2
+(  111)        dv2=(xvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]+xvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])*xarea[FTNREF2
+(  112) 
+(  113)        div=div+dv2-dv1;
+(  114) 
+(  115)        dtut=dtu_safe*2.0*volume[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]/MAX(fabs(dv1),MAX(fabs(dv2),g_small*volume[FTNREF2D(j
+(  116) 
+(  117)        dv1=(yvel0[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]+yvel0[FTNREF2D(j+1,k,x_max+5,x_min-2,y_min-2)])*yarea[FTNREF2D(j,k,
+(  118)        dv2=(yvel0[FTNREF2D(j,k+1,x_max+5,x_min-2,y_min-2)]+yvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])*yarea[FTNREF2D(
+(  119) 
+(  120)        div=div+dv2-dv1;
+(  121) 
+(  122)        dtvt=dtv_safe*2.0*volume[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]/MAX(fabs(dv1),MAX(fabs(dv2),g_small*volume[FTNREF2D(j
+(  123) 
+(  124)        div=div/(2.0*volume[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]);
+(  125) 
+(  126)        if(div < -g_small) {
+(  127)          dtdivt=dtdiv_safe*(-1.0/div);
+(  128)        }
+(  129)        else {
+(  130)          dtdivt=g_big;
+(  131)        }
+(  132) 
+(  133)        dt_min[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]=MIN(dtct,MIN(dtut,MIN(dtvt,dtdivt)));
+(  134) 
+(  135)     }
+(  136)   }
+(  137) 
+(  138) #pragma omp for private(j) reduction(min:dt_min_val)
+(  139)   for (k=y_min;k<=y_max;k++) {
+(  140) #pragma ivdep
+(  141)     for (j=x_min;j<=x_max;j++) {
+(  142)       if(dt_min[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)] < dt_min_val) dt_min_val=dt_min[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)
+(  143)     }
+(  144)   }
+(  145) 
+(  146)  }
+(  147) 
+(  148)   // Extract the mimimum timestep information
+(  149)   dtl_control=10.01*(jk_control-(int)(jk_control));
+(  150)   jk_control=jk_control-(jk_control-(int)(jk_control));
+
+
+
+PGC Version 13.5          07/18/2014  14:45:39      page 4
+
+
+(  151)   j_ldt=1; //MOD(INT(jk_control),x_max)
+(  152)   k_ldt=1; //1+(jk_control/x_max)
+(  153)   //xl_pos=cellx[FTNREF1D(j_ldt,xmin-2)];
+(  154)   //yl_pos=celly[FTNREF1D(j_ldt,ymin-2)];
+(  155) 
+(  156)   if(dt_min_val < min_dt) small=1;
+(  157) 
+(  158)   *dtminval=dt_min_val;
+(  159)   *dtlcontrol=1;
+(  160)   *xlpos=xl_pos;
+(  161)   *ylpos=yl_pos;
+(  162)   *jldt=j_ldt;
+(  163)   *kldt=k_ldt;
+(  164) 
+(  165)   if(small != 0) {
+(  166)     printf("Timestep information:\n");
+(  167)     printf("j, k                 :%i %i \n",j_ldt,k_ldt);
+(  168)     printf("x, y                 :%f %f \n",xl_pos,yl_pos);
+(  169)     printf("timestep : %f\n",dt_min_val);
+(  170)     printf("Cell velocities;\n");
+(  171)     printf("%f %f \n",xvel0[FTNREF2D(j_ldt  ,k_ldt  ,x_max+5,x_min-2,y_min-2)],yvel0[FTNREF2D(j_ldt  ,k_ldt  ,x_max+5,x_min-
+(  172)     printf("%f %f \n",xvel0[FTNREF2D(j_ldt+1,k_ldt  ,x_max+5,x_min-2,y_min-2)],yvel0[FTNREF2D(j_ldt+1,k_ldt  ,x_max+5,x_min-
+(  173)     printf("%f %f \n",xvel0[FTNREF2D(j_ldt+1,k_ldt+1,x_max+5,x_min-2,y_min-2)],yvel0[FTNREF2D(j_ldt+1,k_ldt+1,x_max+5,x_min-
+(  174)     printf("%f %f \n",xvel0[FTNREF2D(j_ldt  ,k_ldt+1,x_max+5,x_min-2,y_min-2)],yvel0[FTNREF2D(j_ldt  ,k_ldt+1,x_max+5,x_min-
+(  175)     printf("density, energy, pressure, soundspeed \n");
+(  176)     printf("%f %f %f %f \n",density0[FTNREF2D(j_ldt,k_ldt,x_max+4,x_min-2,y_min-2)],energy0[FTNREF2D(j_ldt,k_ldt,x_max+4,x_m
+(  177)   }
+(  178) 
+(  179) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,110 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:27      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: viscosity.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Driver for the viscosity kernels
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Selects the user specified kernel to caluclate the artificial 
+(   21) !>  viscosity.
+(   22) 
+(   23) MODULE viscosity_module
+(   24) 
+(   25) CONTAINS
+(   26) 
+(   27) SUBROUTINE viscosity()
+(   28) 
+(   29)   USE clover_module
+(   30)   USE viscosity_kernel_module
+(   31)   
+(   32)   IMPLICIT NONE
+(   33) 
+(   34)   INTEGER :: c
+(   35) 
+(   36)   DO c=1,chunks_per_task
+(   37) 
+(   38)     IF(chunks(c)%task.EQ.parallel%task) THEN
+(   39) 
+(   40)       IF(use_fortran_kernels)THEN
+(   41)         CALL viscosity_kernel(chunks(c)%field%x_min,                   &
+(   42)                             chunks(c)%field%x_max,                     &
+(   43)                             chunks(c)%field%y_min,                     &
+(   44)                             chunks(c)%field%y_max,                     &
+(   45)                             chunks(c)%field%z_min,                     &
+(   46)                             chunks(c)%field%z_max,                     &
+(   47)                             chunks(c)%field%xarea,                     &
+(   48)                             chunks(c)%field%yarea,                     &
+(   49)                             chunks(c)%field%zarea,                     &
+(   50)                             chunks(c)%field%celldx,                    &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:27      page 2
+
+(   51)                             chunks(c)%field%celldy,                    &
+(   52)                             chunks(c)%field%celldz,                    &
+(   53)                             chunks(c)%field%density0,                  &
+(   54)                             chunks(c)%field%pressure,                  &
+(   55)                             chunks(c)%field%viscosity,                 &
+(   56)                             chunks(c)%field%xvel0,                     &
+(   57)                             chunks(c)%field%yvel0,                     &
+(   58)                             chunks(c)%field%zvel0                      )
+(   59)       ELSEIF(use_opencl_kernels)THEN
+(   60) 	CALL viscosity_kernel_ocl()
+(   61)       ELSEIF(use_C_kernels)THEN
+(   62)         CALL viscosity_kernel_c(chunks(c)%field%x_min,                 &
+(   63)                             chunks(c)%field%x_max,                     &
+(   64)                             chunks(c)%field%y_min,                     &
+(   65)                             chunks(c)%field%y_max,                     &
+(   66)                             chunks(c)%field%z_min,                     &
+(   67)                             chunks(c)%field%z_max,                     &
+(   68)                             chunks(c)%field%xarea,                     &
+(   69)                             chunks(c)%field%yarea,                     &
+(   70)                             chunks(c)%field%zarea,                     &
+(   71)                             chunks(c)%field%celldx,                    &
+(   72)                             chunks(c)%field%celldy,                    &
+(   73)                             chunks(c)%field%celldz,                    &
+(   74)                             chunks(c)%field%density0,                  &
+(   75)                             chunks(c)%field%pressure,                  &
+(   76)                             chunks(c)%field%viscosity,                 &
+(   77)                             chunks(c)%field%xvel0,                     &
+(   78)                             chunks(c)%field%yvel0,                     &
+(   79)                             chunks(c)%field%zvel0                      )
+(   80)       ENDIF
+(   81) 
+(   82)     ENDIF
+(   83) 
+(   84)   ENDDO
+(   85) 
+(   86) END SUBROUTINE viscosity
+(   87) 
+(   88) END MODULE viscosity_module

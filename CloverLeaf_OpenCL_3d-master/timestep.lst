@@ -1,0 +1,153 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:28      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: timestep.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Calculate the minimum timestep for all mesh chunks.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invokes the kernels needed to calculate the timestep and finds
+(   21) !>  the minimum across all chunks. Checks if the timestep falls below the
+(   22) !>  user specified limitand outputs the timestep information.
+(   23) 
+(   24) MODULE timestep_module
+(   25) 
+(   26) CONTAINS
+(   27) 
+(   28) SUBROUTINE timestep()
+(   29) 
+(   30)   USE clover_module
+(   31)   USE report_module
+(   32)   USE update_halo_module
+(   33)   USE viscosity_module
+(   34)   USE calc_dt_module
+(   35)   USE ideal_gas_module
+(   36)   USE definitions_module
+(   37) 
+(   38)   IMPLICIT NONE
+(   39) 
+(   40)   INTEGER :: c
+(   41)   INTEGER :: jldt,kldt,lldt
+(   42) 
+(   43)   REAL(KIND=8)    :: dtlp
+(   44)   REAL(KIND=8)    :: x_pos,y_pos,xl_pos,yl_pos,zl_pos
+(   45) 
+(   46)   REAL(KIND=8)    :: kernel_time,timer
+(   47) 
+(   48)   CHARACTER(LEN=8) :: dt_control,dtl_control
+(   49) 
+(   50)   INTEGER :: small
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:28      page 2
+
+(   51) 
+(   52)   INTEGER :: fields(NUM_FIELDS)
+(   53) 
+(   54) !$ INTEGER :: OMP_GET_THREAD_NUM
+(   55) 
+(   56)   dt    = g_big
+(   57)   small=0
+(   58) 
+(   59)   IF(profiler_on) kernel_time=timer()
+(   60)   DO c = 1, chunks_per_task
+(   61)     CALL ideal_gas(c,.FALSE.)
+(   62)   END DO
+(   63)   IF(profiler_on) profiler%ideal_gas=profiler%ideal_gas+(timer()-kernel_time)
+(   64) 
+(   65)   fields=0
+(   66)   fields(FIELD_PRESSURE)=1
+(   67)   fields(FIELD_ENERGY0)=1
+(   68)   fields(FIELD_DENSITY0)=1
+(   69)   fields(FIELD_XVEL0)=1
+(   70)   fields(FIELD_YVEL0)=1
+(   71)   IF(profiler_on) kernel_time=timer()
+(   72)   CALL update_halo(fields,1)
+(   73)   IF(profiler_on) profiler%halo_exchange=profiler%halo_exchange+(timer()-kernel_time)
+(   74) 
+(   75)   IF(profiler_on) kernel_time=timer()
+(   76)   CALL viscosity()
+(   77)   IF(profiler_on) profiler%viscosity=profiler%viscosity+(timer()-kernel_time)
+(   78) 
+(   79)   fields=0
+(   80)   fields(FIELD_VISCOSITY)=1
+(   81)   IF(profiler_on) kernel_time=timer()
+(   82)   CALL update_halo(fields,1)
+(   83)   IF(profiler_on) profiler%halo_exchange=profiler%halo_exchange+(timer()-kernel_time)
+(   84) 
+(   85)   IF(profiler_on) kernel_time=timer()
+(   86)   DO c = 1, chunks_per_task
+(   87)     CALL calc_dt(c,dtlp,dtl_control,xl_pos,yl_pos,zl_pos,jldt,kldt,lldt)
+(   88) 
+(   89)     IF(dtlp.LE.dt) THEN
+(   90)       dt=dtlp
+(   91)       dt_control=dtl_control
+(   92)       x_pos=xl_pos
+(   93)       y_pos=yl_pos
+(   94)       jdt=jldt
+(   95)       kdt=kldt
+(   96)     ENDIF
+(   97)   END DO
+(   98) 
+(   99)   dt = MIN(dt, (dtold * dtrise), dtmax)
+(  100) 
+(  101)   CALL clover_min(dt)
+(  102)   IF(profiler_on) profiler%timestep=profiler%timestep+(timer()-kernel_time)
+(  103) 
+(  104)   IF(dt.LT.dtmin) small=1
+(  105) 
+(  106)   IF (parallel%boss) THEN
+(  107) !$  IF(OMP_GET_THREAD_NUM().EQ.0) THEN
+(  108)       WRITE(g_out,"(' Step ', i7,' time ', f11.7,' control ',a11,' timestep  ',1pe9.2,i8,',',i8,' x ',1pe9.2,' y ',1pe9.2)") &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:28      page 3
+
+(  109)                       step,time,dt_control,dt,jdt,kdt,x_pos,y_pos
+(  110)       WRITE(0,"(' Step ', i7,' time ', f11.7,' control ',a11,' timestep  ',1pe9.2,i8,',',i8,' x ',1pe9.2,' y ',1pe9.2)") &
+(  111)                       step,time,dt_control,dt,jdt,kdt,x_pos,y_pos
+(  112) !$  ENDIF
+(  113)   ENDIF
+(  114) 
+(  115)   IF(small.EQ.1) THEN
+(  116)     CALL report_error('timestep','small timestep')
+(  117)   ENDIF
+(  118) 
+(  119)   dtold = dt
+(  120) 
+(  121) END SUBROUTINE timestep
+(  122) 
+(  123) END MODULE timestep_module

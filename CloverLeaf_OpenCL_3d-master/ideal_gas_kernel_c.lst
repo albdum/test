@@ -1,0 +1,132 @@
+PGC Version 13.5          07/18/2014  14:45:42      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: ideal_gas_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C ideal gas kernel.
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details Calculates the pressure and sound speed for the mesh chunk using
+(   22)  *  the ideal gas equation of state, with a fixed gamma of 1.4.
+(   23)  */
+(   24) 
+(   25) #include <stdio.h>
+(   26) #include <stdlib.h>
+(   27) #include "ftocmacros.h"
+(   28) #include <math.h>
+(   29) 
+(   30) void ideal_gas_kernel_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+
+
+
+PGC Version 13.5          07/18/2014  14:45:42      page 2
+
+
+(   31)                       double *density,
+(   32)                       double *energy,
+(   33)                       double *pressure,
+(   34)                       double *soundspeed)
+(   35) {
+(   36)   int x_min=*xmin;
+(   37)   int x_max=*xmax;
+(   38)   int y_min=*ymin;
+(   39)   int y_max=*ymax;
+(   40) 
+(   41)   int j,k;
+(   42) 
+(   43)   double sound_speed_squared,v,pressurebyenergy,pressurebyvolume;
+(   44)   
+(   45) #pragma omp parallel private(j)
+(   46)  {
+(   47) #pragma omp for private(v,pressurebyenergy,pressurebyvolume,sound_speed_squared)
+(   48)   for (k=y_min;k<=y_max;k++) {
+(   49) #pragma ivdep
+(   50)     for (j=x_min;j<=x_max;j++) {								 
+(   51)       v=1.0/density[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(   52)       pressure[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=(1.4-1.0)*density[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(   53)                                                                    *energy[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(   54)       pressurebyenergy=(1.4-1.0)*density[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(   55)       pressurebyvolume=-density[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]*pressure[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2
+(   56)       sound_speed_squared=v*v*(pressure[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]*pressurebyenergy-pressurebyvolume);
+(   57)       soundspeed[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=sqrt(sound_speed_squared);
+(   58)     }
+(   59)   }
+(   60) 
+(   61)  }
+(   62) 
+(   63) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

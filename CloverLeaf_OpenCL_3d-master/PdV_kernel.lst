@@ -1,0 +1,215 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:30      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: PdV_kernel.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Fortran PdV kernel.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Calculates the change in energy and density in a cell using the
+(   21) !>  change on cell volume due to the velocity gradients in a cell. The time
+(   22) !>  level of the velocity data depends on whether it is invoked as the
+(   23) !>  predictor or corrector.
+(   24) 
+(   25) ! Notes
+(   26) ! Again, fluxes need updating for 3d
+(   27) 
+(   28) MODULE PdV_kernel_module
+(   29) 
+(   30) CONTAINS
+(   31) 
+(   32) SUBROUTINE PdV_kernel(predict,                                          &
+(   33)                       x_min,x_max,y_min,y_max,z_min,z_max,dt,           &
+(   34)                       xarea,yarea,zarea,volume,                         &
+(   35)                       density0,                                         &
+(   36)                       density1,                                         &
+(   37)                       energy0,                                          &
+(   38)                       energy1,                                          &
+(   39)                       pressure,                                         &
+(   40)                       viscosity,                                        &
+(   41)                       xvel0,                                            &
+(   42)                       xvel1,                                            &
+(   43)                       yvel0,                                            &
+(   44)                       yvel1,                                            &
+(   45)                       zvel0,                                            &
+(   46)                       zvel1,                                            &
+(   47)                       volume_change                                     )
+(   48) 
+(   49)   IMPLICIT NONE
+(   50) 
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:30      page 2
+
+(   51)   LOGICAL :: predict
+(   52) 
+(   53)   INTEGER :: x_min,x_max,y_min,y_max,z_min,z_max
+(   54)   REAL(KIND=8)  :: dt
+(   55)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+2,z_min-2:z_max+2) :: xarea
+(   56)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+3,z_min-2:z_max+2) :: yarea
+(   57)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+3) :: zarea
+(   58)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: volume
+(   59)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: density0,energy0
+(   60)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: pressure
+(   61)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: density1,energy1
+(   62)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: viscosity
+(   63)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: xvel0,yvel0,zvel0
+(   64)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: xvel1,yvel1,zvel1
+(   65)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: volume_change
+(   66) 
+(   67)   INTEGER :: j,k,l
+(   68) 
+(   69)   REAL(KIND=8)  :: recip_volume,energy_change,min_cell_volume
+(   70)   REAL(KIND=8)  :: right_flux,left_flux,top_flux,bottom_flux,back_flux,front_flux,total_flux
+(   71) 
+(   72) !$OMP PARALLEL
+(   73) 
+(   74)   IF(predict)THEN
+(   75) 
+(   76) !$OMP DO PRIVATE(right_flux,left_flux,top_flux,bottom_flux,back_flux,front_flux,total_flux,min_cell_volume, &
+(   77) !$OMP            energy_change,recip_volume)
+(   78)     DO l=z_min,z_max
+(   79)       DO k=y_min,y_max
+(   80)         DO j=x_min,x_max
+(   81) 
+(   82)           left_flux=  (xarea(j  ,k  ,l  )*(xvel0(j  ,k  ,l  )+xvel0(j  ,k+1,l  )+xvel0(j  ,k  ,l+1)+xvel0(j  ,k+1,l+1)   &
+(   83)                                           +xvel0(j  ,k  ,l  )+xvel0(j  ,k+1,l  )+xvel0(j  ,k  ,l+1)+xvel0(j  ,k+1,l+1))) &
+(   84)                       *0.125_8*dt*0.5
+(   85)           right_flux= (xarea(j+1,k  ,l  )*(xvel0(j+1,k  ,l  )+xvel0(j+1,k+1,l  )+xvel0(j+1,k  ,l+1)+xvel0(j+1,k+1,l+1)   &
+(   86)                                           +xvel0(j+1,k  ,l  )+xvel0(j+1,k+1,l  )+xvel0(j+1,k  ,l+1)+xvel0(j+1,k+1,l+1))) &
+(   87)                       *0.125_8*dt*0.5
+(   88)           bottom_flux=(yarea(j  ,k  ,l  )*(yvel0(j  ,k  ,l  )+yvel0(j+1,k  ,l  )+yvel0(j  ,k  ,l+1)+yvel0(j+1,k  ,l+1)   &
+(   89)                                           +yvel0(j  ,k  ,l  )+yvel0(j+1,k  ,l  )+yvel0(j  ,k  ,l+1)+yvel0(j+1,k  ,l+1))) &
+(   90)                       *0.125_8*dt*0.5
+(   91)           top_flux=   (yarea(j  ,k+1,l  )*(yvel0(j  ,k+1,l  )+yvel0(j+1,k+1,l  )+yvel0(j  ,k+1,l+1)+yvel0(j+1,k+1,l+1)   &
+(   92)                                           +yvel0(j  ,k+1,l  )+yvel0(j+1,k+1,l  )+yvel0(j  ,k+1,l+1)+yvel0(j+1,k+1,l+1))) &
+(   93)                       *0.125_8*dt*0.5
+(   94)           back_flux=  (zarea(j  ,k  ,l  )*(zvel0(j  ,k  ,l  )+zvel0(j+1,k  ,l  )+zvel0(j  ,k+1,l  )+zvel0(j+1,k+1,l  )   &
+(   95)                                           +zvel0(j  ,k  ,l  )+zvel0(j+1,k  ,l  )+zvel0(j  ,k+1,l  )+zvel0(j+1,k+1,l  ))) &
+(   96)                       *0.125_8*dt*0.5
+(   97)           front_flux= (zarea(j  ,k  ,l+1)*(zvel0(j  ,k  ,l+1)+zvel0(j+1,k  ,l+1)+zvel0(j  ,k+1,l+1)+zvel0(j+1,k+1,l+1)   &
+(   98)                                           +zvel0(j  ,k  ,l+1)+zvel0(j+1,k  ,l+1)+zvel0(j  ,k+1,l+1)+zvel0(j+1,k+1,l+1))) &
+(   99)                       *0.125_8*dt*0.5
+(  100)           total_flux=right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux
+(  101) 
+(  102)           volume_change(j,k,l)=volume(j,k,l)/(volume(j,k,l)+total_flux)
+(  103) 
+(  104)           min_cell_volume=MIN(volume(j,k,l)+right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux  &
+(  105)                              ,volume(j,k,l)+right_flux-left_flux+top_flux-bottom_flux                       &
+(  106)                              ,volume(j,k,l)+right_flux-left_flux                                            &
+(  107)                              ,volume(j,k,l)+top_flux-bottom_flux)
+(  108)  
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:30      page 3
+
+(  109)           recip_volume=1.0/volume(j,k,l) 
+(  110) 
+(  111)           energy_change=(pressure(j,k,l)/density0(j,k,l)+viscosity(j,k,l)/density0(j,k,l))*total_flux*recip_volume
+(  112) 
+(  113)           energy1(j,k,l)=energy0(j,k,l)-energy_change
+(  114) 
+(  115)           density1(j,k,l)=density0(j,k,l)*volume_change(j,k,l)
+(  116) 
+(  117)         ENDDO
+(  118)       ENDDO
+(  119)     ENDDO
+(  120) !$OMP END DO
+(  121) 
+(  122)   ELSE
+(  123) 
+(  124) !$OMP DO PRIVATE(right_flux,left_flux,top_flux,bottom_flux,back_flux,front_flux,total_flux,min_cell_volume, &
+(  125) !$OMP            energy_change,recip_volume)
+(  126)     DO l=z_min,z_max
+(  127)       DO k=y_min,y_max
+(  128)         DO j=x_min,x_max
+(  129) 
+(  130)           left_flux=  (xarea(j  ,k  ,l  )*(xvel0(j  ,k  ,l  )+xvel0(j  ,k+1,l  )+xvel0(j  ,k  ,l+1)+xvel0(j  ,k+1,l+1)   &
+(  131)                                           +xvel1(j  ,k  ,l  )+xvel1(j  ,k+1,l  )+xvel1(j  ,k  ,l+1)+xvel1(j  ,k+1,l+1))) &
+(  132)                       *0.125_8*dt
+(  133)           right_flux= (xarea(j+1,k  ,l  )*(xvel0(j+1,k  ,l  )+xvel0(j+1,k+1,l  )+xvel0(j+1,k  ,l+1)+xvel0(j+1,k+1,l+1)   &
+(  134)                                           +xvel1(j+1,k  ,l  )+xvel1(j+1,k+1,l  )+xvel1(j+1,k  ,l+1)+xvel1(j+1,k+1,l+1))) &
+(  135)                       *0.125_8*dt
+(  136)           bottom_flux=(yarea(j  ,k  ,l  )*(yvel0(j  ,k  ,l  )+yvel0(j+1,k  ,l  )+yvel0(j  ,k  ,l+1)+yvel0(j+1,k  ,l+1)   &
+(  137)                                           +yvel1(j  ,k  ,l  )+yvel1(j+1,k  ,l  )+yvel1(j  ,k  ,l+1)+yvel1(j+1,k  ,l+1))) &
+(  138)                       *0.125_8*dt
+(  139)           top_flux=   (yarea(j  ,k+1,l  )*(yvel0(j  ,k+1,l  )+yvel0(j+1,k+1,l  )+yvel0(j  ,k+1,l+1)+yvel0(j+1,k+1,l+1)   &
+(  140)                                           +yvel1(j  ,k+1,l  )+yvel1(j+1,k+1,l  )+yvel1(j  ,k+1,l+1)+yvel1(j+1,k+1,l+1))) &
+(  141)                       *0.125_8*dt
+(  142)           back_flux=  (zarea(j  ,k  ,l  )*(zvel0(j  ,k  ,l  )+zvel0(j+1,k  ,l  )+zvel0(j  ,k+1,l  )+zvel0(j+1,k+1,l  )   &
+(  143)                                           +zvel1(j  ,k  ,l  )+zvel1(j+1,k  ,l  )+zvel1(j  ,k+1,l  )+zvel1(j+1,k+1,l  ))) &
+(  144)                       *0.125_8*dt
+(  145)           front_flux= (zarea(j  ,k  ,l+1)*(zvel0(j  ,k  ,l+1)+zvel0(j+1,k  ,l+1)+zvel0(j  ,k+1,l+1)+zvel0(j+1,k+1,l+1)   &
+(  146)                                           +zvel1(j  ,k  ,l+1)+zvel1(j+1,k  ,l+1)+zvel1(j  ,k+1,l+1)+zvel1(j+1,k+1,l+1))) &
+(  147)                       *0.125_8*dt
+(  148)           total_flux=right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux
+(  149) 
+(  150)           volume_change(j,k,l)=volume(j,k,l)/(volume(j,k,l)+total_flux)
+(  151) 
+(  152)           min_cell_volume=MIN(volume(j,k,l)+right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux  &
+(  153)                              ,volume(j,k,l)+right_flux-left_flux+top_flux-bottom_flux                       &
+(  154)                              ,volume(j,k,l)+right_flux-left_flux                                            &
+(  155)                              ,volume(j,k,l)+top_flux-bottom_flux)
+(  156)  
+(  157)           recip_volume=1.0/volume(j,k,l) 
+(  158) 
+(  159)           energy_change=(pressure(j,k,l)/density0(j,k,l)+viscosity(j,k,l)/density0(j,k,l))*total_flux*recip_volume
+(  160) 
+(  161)           energy1(j,k,l)=energy0(j,k,l)-energy_change
+(  162) 
+(  163)           density1(j,k,l)=density0(j,k,l)*volume_change(j,k,l)
+(  164) 
+(  165)         ENDDO
+(  166)       ENDDO
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:30      page 4
+
+(  167)     ENDDO
+(  168) !$OMP END DO
+(  169) 
+(  170)   ENDIF
+(  171) 
+(  172) !$OMP END PARALLEL
+(  173) 
+(  174) END SUBROUTINE PdV_kernel
+(  175) 
+(  176) END MODULE PdV_kernel_module
+(  177) 

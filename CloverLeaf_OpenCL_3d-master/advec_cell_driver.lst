@@ -1,0 +1,126 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: advec_cell_driver.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Cell centred advection driver.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invokes the user selected advection kernel.
+(   21) 
+(   22) MODULE  advec_cell_driver_module
+(   23) 
+(   24) CONTAINS
+(   25) 
+(   26) SUBROUTINE advec_cell_driver(chunk,sweep_number,dir)
+(   27) 
+(   28)   USE clover_module
+(   29)   USE advec_cell_kernel_module
+(   30) 
+(   31)   IMPLICIT NONE
+(   32) 
+(   33)   INTEGER :: chunk,sweep_number,dir
+(   34) 
+(   35)   IF(chunks(chunk)%task.EQ.parallel%task) THEN
+(   36) 
+(   37)     IF(use_fortran_kernels)THEN
+(   38)       CALL advec_cell_kernel(chunks(chunk)%field%x_min,               &
+(   39)                            chunks(chunk)%field%x_max,                 &
+(   40)                            chunks(chunk)%field%y_min,                 &
+(   41)                            chunks(chunk)%field%y_max,                 &
+(   42)                            chunks(chunk)%field%z_min,                 &
+(   43)                            chunks(chunk)%field%z_max,                 &
+(   44)                            advect_x,                                  &
+(   45)                            dir,                                       &
+(   46)                            sweep_number,                              &
+(   47)                            chunks(chunk)%field%vertexdx,              &
+(   48)                            chunks(chunk)%field%vertexdy,              &
+(   49)                            chunks(chunk)%field%vertexdz,              &
+(   50)                            chunks(chunk)%field%volume,                &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:33      page 2
+
+(   51)                            chunks(chunk)%field%density1,              &
+(   52)                            chunks(chunk)%field%energy1,               &
+(   53)                            chunks(chunk)%field%mass_flux_x,           &
+(   54)                            chunks(chunk)%field%vol_flux_x,            &
+(   55)                            chunks(chunk)%field%mass_flux_y,           &
+(   56)                            chunks(chunk)%field%vol_flux_y,            &
+(   57)                            chunks(chunk)%field%mass_flux_z,           &
+(   58)                            chunks(chunk)%field%vol_flux_z,            &
+(   59)                            chunks(chunk)%field%work_array1,           &
+(   60)                            chunks(chunk)%field%work_array2,           &
+(   61)                            chunks(chunk)%field%work_array3,           &
+(   62)                            chunks(chunk)%field%work_array4,           &
+(   63)                            chunks(chunk)%field%work_array5,           &
+(   64)                            chunks(chunk)%field%work_array6,           &
+(   65)                            chunks(chunk)%field%work_array7            )
+(   66)     ELSEIF(use_opencl_kernels)THEN
+(   67) 	CALL advec_cell_kernel_ocl(dir, sweep_number)
+(   68)     ELSEIF(use_C_kernels)THEN
+(   69)       CALL advec_cell_kernel_c(chunks(chunk)%field%x_min,             &
+(   70)                            chunks(chunk)%field%x_max,                 &
+(   71)                            chunks(chunk)%field%y_min,                 &
+(   72)                            chunks(chunk)%field%y_max,                 &
+(   73)                            chunks(chunk)%field%z_min,                 &
+(   74)                            chunks(chunk)%field%z_max,                 &
+(   75)                            advect_x,                                  &
+(   76)                            dir,                                       &
+(   77)                            sweep_number,                              &
+(   78)                            chunks(chunk)%field%vertexdx,              &
+(   79)                            chunks(chunk)%field%vertexdy,              &
+(   80)                            chunks(chunk)%field%vertexdz,              &
+(   81)                            chunks(chunk)%field%volume,                &
+(   82)                            chunks(chunk)%field%density1,              &
+(   83)                            chunks(chunk)%field%energy1,               &
+(   84)                            chunks(chunk)%field%mass_flux_x,           &
+(   85)                            chunks(chunk)%field%vol_flux_x,            &
+(   86)                            chunks(chunk)%field%mass_flux_y,           &
+(   87)                            chunks(chunk)%field%vol_flux_y,            &
+(   88)                            chunks(chunk)%field%mass_flux_z,           &
+(   89)                            chunks(chunk)%field%vol_flux_z,            &
+(   90)                            chunks(chunk)%field%work_array1,           &
+(   91)                            chunks(chunk)%field%work_array2,           &
+(   92)                            chunks(chunk)%field%work_array3,           &
+(   93)                            chunks(chunk)%field%work_array4,           &
+(   94)                            chunks(chunk)%field%work_array5,           &
+(   95)                            chunks(chunk)%field%work_array6,           &
+(   96)                            chunks(chunk)%field%work_array7            )
+(   97)     ENDIF
+(   98) 
+(   99)   ENDIF
+(  100) 
+(  101) END SUBROUTINE advec_cell_driver
+(  102) 
+(  103) END MODULE  advec_cell_driver_module
+(  104) 

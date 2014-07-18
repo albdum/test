@@ -1,0 +1,120 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:17      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: initialise_chunk.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Driver for chunk initialisation.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invokes the user specified chunk initialisation kernel.
+(   21) 
+(   22) SUBROUTINE initialise_chunk(chunk)
+(   23) 
+(   24)   USE clover_module
+(   25)   USE initialise_chunk_kernel_module
+(   26) 
+(   27)   IMPLICIT NONE
+(   28) 
+(   29)   INTEGER :: chunk
+(   30) 
+(   31)   REAL(KIND=8) :: xmin,ymin,zmin,dx,dy,dz
+(   32) 
+(   33)   dx=(grid%xmax-grid%xmin)/float(grid%x_cells)
+(   34)   dy=(grid%ymax-grid%ymin)/float(grid%y_cells)
+(   35)   dz=(grid%zmax-grid%zmin)/float(grid%z_cells)
+(   36) 
+(   37)   xmin=grid%xmin+dx*float(chunks(chunk)%field%left-1)
+(   38) 
+(   39)   ymin=grid%ymin+dy*float(chunks(chunk)%field%bottom-1)
+(   40) 
+(   41)   zmin=grid%zmin+dz*float(chunks(chunk)%field%back-1)
+(   42) 
+(   43)   IF(use_fortran_kernels) THEN
+(   44)     CALL initialise_chunk_kernel(chunks(chunk)%field%x_min,    &
+(   45)                                  chunks(chunk)%field%x_max,    &
+(   46)                                  chunks(chunk)%field%y_min,    &
+(   47)                                  chunks(chunk)%field%y_max,    &
+(   48)                                  chunks(chunk)%field%z_min,    &
+(   49)                                  chunks(chunk)%field%z_max,    &
+(   50)                                  xmin,ymin,zmin,dx,dy,dz,      &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:17      page 2
+
+(   51)                                  chunks(chunk)%field%vertexx,  &
+(   52)                                  chunks(chunk)%field%vertexdx, &
+(   53)                                  chunks(chunk)%field%vertexy,  &
+(   54)                                  chunks(chunk)%field%vertexdy, &
+(   55)                                  chunks(chunk)%field%vertexz,  &
+(   56)                                  chunks(chunk)%field%vertexdz, &
+(   57)                                  chunks(chunk)%field%cellx,    &
+(   58)                                  chunks(chunk)%field%celldx,   &
+(   59)                                  chunks(chunk)%field%celly,    &
+(   60)                                  chunks(chunk)%field%celldy,   &
+(   61)                                  chunks(chunk)%field%cellz,    &
+(   62)                                  chunks(chunk)%field%celldz,   &
+(   63)                                  chunks(chunk)%field%volume,   &
+(   64)                                  chunks(chunk)%field%xarea,    &
+(   65)                                  chunks(chunk)%field%yarea,    &
+(   66)                                  chunks(chunk)%field%zarea     )
+(   67)   ELSEIF(use_opencl_kernels)THEN
+(   68)     CALL initialise_chunk_kernel_ocl(xmin,ymin,zmin,dx,dy,dz)
+(   69)   ELSEIF(use_C_kernels)THEN
+(   70)     CALL initialise_chunk_kernel_c(chunks(chunk)%field%x_min,      &
+(   71)                                    chunks(chunk)%field%x_max,      &
+(   72)                                    chunks(chunk)%field%y_min,      &
+(   73)                                    chunks(chunk)%field%y_max,      &
+(   74)                                    chunks(chunk)%field%z_min,      &
+(   75)                                    chunks(chunk)%field%z_max,      &
+(   76)                                    xmin,ymin,zmin,dx,dy,dz,        &
+(   77)                                    chunks(chunk)%field%vertexx,    &
+(   78)                                    chunks(chunk)%field%vertexdx,   &
+(   79)                                    chunks(chunk)%field%vertexz,    &
+(   80)                                    chunks(chunk)%field%vertexdz,   &
+(   81)                                    chunks(chunk)%field%vertexy,    &
+(   82)                                    chunks(chunk)%field%vertexdy,   &
+(   83)                                    chunks(chunk)%field%vertexz,    &
+(   84)                                    chunks(chunk)%field%vertexdz,   &
+(   85)                                    chunks(chunk)%field%cellx,      &
+(   86)                                    chunks(chunk)%field%celldx,     &
+(   87)                                    chunks(chunk)%field%celly,      &
+(   88)                                    chunks(chunk)%field%celldy,     &
+(   89)                                    chunks(chunk)%field%cellz,      &
+(   90)                                    chunks(chunk)%field%celldz,     &
+(   91)                                    chunks(chunk)%field%volume,     &
+(   92)                                    chunks(chunk)%field%xarea,      &
+(   93)                                    chunks(chunk)%field%yarea,      &
+(   94)                                    chunks(chunk)%field%zarea       )
+(   95)   ENDIF
+(   96) 
+(   97) 
+(   98) END SUBROUTINE initialise_chunk

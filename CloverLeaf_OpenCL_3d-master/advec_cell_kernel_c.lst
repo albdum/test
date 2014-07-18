@@ -1,0 +1,396 @@
+PGC Version 13.5          07/18/2014  14:45:43      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: advec_cell_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C cell advection kernel.
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details Performs a second order advective remap using van-Leer limiting
+(   22)  *  with directional splitting.
+(   23)  */
+(   24) 
+(   25) #include <stdio.h>
+(   26) #include <stdlib.h>
+(   27) #include "ftocmacros.h"
+(   28) #include <math.h>
+(   29) 
+(   30) void advec_cell_kernel_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 2
+
+
+(   31)                           int *dr,
+(   32)                           int *swp_nmbr,
+(   33)                        double *vertexdx,
+(   34)                        double *vertexdy,
+(   35)                        double *volume,
+(   36)                        double *density1,
+(   37)                        double *energy1,
+(   38)                        double *mass_flux_x,
+(   39)                        double *vol_flux_x,
+(   40)                        double *mass_flux_y,
+(   41)                        double *vol_flux_y,
+(   42)                        double *pre_vol,
+(   43)                        double *post_vol,
+(   44)                        double *pre_mass,
+(   45)                        double *post_mass,
+(   46)                        double *advec_vol,
+(   47)                        double *post_ener,
+(   48)                        double *ener_flux)
+(   49) 
+(   50) 
+(   51) {
+(   52)   int x_min=*xmin;
+(   53)   int x_max=*xmax;
+(   54)   int y_min=*ymin;
+(   55)   int y_max=*ymax;
+(   56)   int sweep_number=*swp_nmbr;
+(   57)   int dir=*dr;
+(   58) 
+(   59)   int j,k,upwind,donor,downwind,dif;
+(   60) 
+(   61)   int g_xdir=1,g_ydir=2;
+(   62) 
+(   63)   double sigma,sigmat,sigmav,sigmam,sigma3,sigma4,diffuw,diffdw,limiter;
+(   64)   double one_by_six;
+(   65) 
+(   66)   one_by_six=1.0/6.0;
+(   67) 
+(   68) #pragma omp parallel
+(   69)  {
+(   70)   if(dir==g_xdir){
+(   71) 
+(   72)     if(sweep_number==1){
+(   73) #pragma omp for private(j)
+(   74)       for (k=y_min-2;k<=y_max+2;k++) {
+(   75) #pragma ivdep
+(   76)         for (j=x_min-2;j<=x_max+2;j++) {
+(   77) 
+(   78)           pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(   79)                                                            +(vol_flux_x[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   80)                                                             -vol_flux_x[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   81)                                                             +vol_flux_y[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)]
+(   82)                                                             -vol_flux_y[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]);
+(   83)           post_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   84)                                                             -(vol_flux_x[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   85)                                                              -vol_flux_x[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]);
+(   86)         }
+(   87)       }
+(   88) 
+(   89)     }
+(   90)     else {
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 3
+
+
+(   91) #pragma omp for private(j)
+(   92)       for (k=y_min-2;k<=y_max+2;k++) {
+(   93) #pragma ivdep
+(   94)         for (j=x_min-2;j<=x_max+2;j++) {
+(   95)           pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(   96)                                                             +vol_flux_x[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   97)                                                             -vol_flux_x[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(   98)           post_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(   99)         }
+(  100)       }
+(  101) 
+(  102)     }
+(  103) #pragma omp for private(upwind,donor,downwind,dif,sigmat,sigma3,sigma4,sigmav,sigma,sigmam,diffuw,diffdw,limiter,j)
+(  104)     for (k=y_min;k<=y_max;k++) {
+(  105)       for (j=x_min;j<=x_max+2;j++) {
+(  106) 
+(  107)         if(vol_flux_x[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]>0.0){
+(  108)           upwind   =j-2;
+(  109)           donor    =j-1;
+(  110)           downwind =j;
+(  111)           dif      =donor;
+(  112)         }
+(  113)         else {
+(  114)           upwind   =MIN(j+1,x_max+2);
+(  115)           donor    =j;
+(  116)           downwind =j-1;
+(  117)           dif      =upwind;
+(  118)         }
+(  119) 
+(  120)         sigmat=fabs(vol_flux_x[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]/pre_vol[FTNREF2D(donor,k  ,x_max+5,x_min-2,y_min-2)]);
+(  121)         sigma3=(1.0+sigmat)*(vertexdx[FTNREF1D(j,x_min-2)]/vertexdx[FTNREF1D(dif,x_min-2)]);
+(  122)         sigma4=2.0-sigmat;
+(  123) 
+(  124)         sigma=sigmat;
+(  125)         sigmav=sigmat;
+(  126) 
+(  127)         diffuw=density1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2)]-density1[FTNREF2D(upwind,k  ,x_max+4,x_min-2,y_min-2)];
+(  128)         diffdw=density1[FTNREF2D(downwind,k  ,x_max+4,x_min-2,y_min-2)]-density1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2)
+(  129)         if(diffuw*diffdw>0.0){
+(  130)           limiter=(1.0-sigmav)*SIGN(1.0,diffdw)*MIN(fabs(diffuw),MIN(fabs(diffdw)
+(  131)               ,one_by_six*(sigma3*fabs(diffuw)+sigma4*fabs(diffdw))));
+(  132)         }
+(  133)         else{
+(  134)           limiter=0.0;
+(  135)         }
+(  136)         mass_flux_x[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]=vol_flux_x[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]
+(  137)                                                           *(density1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2)]+limiter);
+(  138) 
+(  139)         sigmam=fabs(mass_flux_x[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)])/(density1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2
+(  140)               *pre_vol[FTNREF2D(donor,k  ,x_max+5,x_min-2,y_min-2)]);
+(  141)         diffuw=energy1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2)]-energy1[FTNREF2D(upwind,k  ,x_max+4,x_min-2,y_min-2)];
+(  142)         diffdw=energy1[FTNREF2D(downwind,k  ,x_max+4,x_min-2,y_min-2)]-energy1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2)];
+(  143)         if(diffuw*diffdw>0.0){
+(  144)           limiter=(1.0-sigmam)*SIGN(1.0,diffdw)*MIN(fabs(diffuw),MIN(fabs(diffdw)
+(  145)               ,one_by_six*(sigma3*fabs(diffuw)+sigma4*fabs(diffdw))));
+(  146)         }
+(  147)         else {
+(  148)           limiter=0.0;
+(  149)         }
+(  150)         ener_flux[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]=mass_flux_x[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 4
+
+
+(  151)                                                         *(energy1[FTNREF2D(donor,k  ,x_max+4,x_min-2,y_min-2)]+limiter);
+(  152) 
+(  153)       }
+(  154)     }
+(  155)     
+(  156) #pragma omp for private(j)
+(  157)     for (k=y_min;k<=y_max;k++) {
+(  158) #pragma ivdep
+(  159)      for (j=x_min;j<=x_max;j++) {
+(  160)         pre_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=density1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  161)                                                            *pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  162)         post_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=pre_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  163)                                                             +mass_flux_x[FTNREF2D(j  ,k,x_max+5,x_min-2,y_min-2)]
+(  164)                                                             -mass_flux_x[FTNREF2D(j+1,k,x_max+5,x_min-2,y_min-2)];
+(  165)         post_ener[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=(energy1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  166)                                                             *pre_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  167)                                                             +ener_flux[FTNREF2D(j  ,k,x_max+5,x_min-2,y_min-2)]
+(  168)                                                             -ener_flux[FTNREF2D(j+1,k,x_max+5,x_min-2,y_min-2)])
+(  169)                                                             /post_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  170)         advec_vol [FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  171)                                                              +vol_flux_x[FTNREF2D(j  ,k,x_max+5,x_min-2,y_min-2)]
+(  172)                                                              -vol_flux_x[FTNREF2D(j+1,k,x_max+5,x_min-2,y_min-2)];
+(  173) 
+(  174)         density1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=post_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]/advec_vol[F
+(  175)         energy1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=post_ener[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  176)       }
+(  177)     }
+(  178) 
+(  179)   }
+(  180)   else if(dir==g_ydir){
+(  181) 
+(  182)     if(sweep_number==1){
+(  183)       
+(  184) #pragma omp for private(j)
+(  185)       for (k=y_min-2;k<=y_max+2;k++) {
+(  186) #pragma ivdep
+(  187)         for (j=x_min-2;j<=x_max+2;j++) {
+(  188) 
+(  189)           pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  190)                                                            +(vol_flux_y[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)]
+(  191)                                                             -vol_flux_y[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  192)                                                             +vol_flux_x[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(  193)                                                             -vol_flux_x[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]);
+(  194)           post_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  195)                                                             -(vol_flux_y[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)]
+(  196)                                                              -vol_flux_y[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]);
+(  197)         }
+(  198)       }
+(  199) 
+(  200)     }
+(  201)     else {
+(  202) 
+(  203) #pragma omp for private(j)
+(  204)       for (k=y_min-2;k<=y_max+2;k++) {
+(  205) #pragma ivdep
+(  206)         for (j=x_min-2;j<=x_max+2;j++) {
+(  207)           pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  208)                                                         +vol_flux_y[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)]
+(  209)                                                         -vol_flux_y[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(  210)           post_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 5
+
+
+(  211)         }
+(  212)       }
+(  213) 
+(  214)     }
+(  215)     
+(  216) #pragma omp for private(upwind,donor,downwind,dif,sigmat,sigma3,sigma4,sigmav,sigma,sigmam,diffuw,diffdw,limiter,j)
+(  217)     for (k=y_min;k<=y_max+2;k++) {
+(  218)       for (j=x_min;j<=x_max;j++) {
+(  219) 
+(  220)         if(vol_flux_y[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]>0.0){
+(  221)           upwind   =k-2;
+(  222)           donor    =k-1;
+(  223)           downwind =k;
+(  224)           dif      =donor;
+(  225)         }
+(  226)         else {
+(  227)           upwind   =MIN(k+1,y_max+2);
+(  228)           donor    =k;
+(  229)           downwind =k-1;
+(  230)           dif      =upwind;
+(  231)         }
+(  232) 
+(  233)         sigmat=fabs(vol_flux_y[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]/pre_vol[FTNREF2D(j  ,donor,x_max+5,x_min-2,y_min-2)]);
+(  234)         sigma3=(1.0+sigmat)*(vertexdy[FTNREF1D(k,y_min-2)]/vertexdy[FTNREF1D(dif,y_min-2)]);
+(  235)         sigma4=2.0-sigmat;
+(  236) 
+(  237)         sigma=sigmat;
+(  238)         sigmav=sigmat;
+(  239) 
+(  240)         diffuw=density1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2)]-density1[FTNREF2D(j  ,upwind,x_max+4,x_min-2,y_min-2)];
+(  241)         diffdw=density1[FTNREF2D(j  ,downwind,x_max+4,x_min-2,y_min-2)]-density1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2)
+(  242) 
+(  243)         if(diffuw*diffdw>0.0){
+(  244)           limiter=(1.0-sigmav)*SIGN(1.0,diffdw)*MIN(fabs(diffuw),MIN(fabs(diffdw)
+(  245)               ,one_by_six*(sigma3*fabs(diffuw)+sigma4*fabs(diffdw))));
+(  246)         }
+(  247)         else{
+(  248)           limiter=0.0;
+(  249)         }
+(  250)         mass_flux_y[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]=vol_flux_y[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]
+(  251)                                                           *(density1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2)]+limiter);
+(  252) 
+(  253)         sigmam=fabs(mass_flux_y[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)])/(density1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2
+(  254)               *pre_vol[FTNREF2D(j  ,donor,x_max+5,x_min-2,y_min-2)]);
+(  255)         diffuw=energy1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2)]-energy1[FTNREF2D(j  ,upwind,x_max+4,x_min-2,y_min-2)];
+(  256)         diffdw=energy1[FTNREF2D(j  ,downwind,x_max+4,x_min-2,y_min-2)]-energy1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2)];
+(  257)         if(diffuw*diffdw>0.0){
+(  258)           limiter=(1.0-sigmam)*SIGN(1.0,diffdw)*MIN(fabs(diffuw),MIN(fabs(diffdw)
+(  259)               ,one_by_six*(sigma3*fabs(diffuw)+sigma4*fabs(diffdw))));
+(  260)         }
+(  261)         else {
+(  262)           limiter=0.0;
+(  263)         }
+(  264)         ener_flux[FTNREF2D(j,k,x_max+5,x_min-2,y_min-2)]=mass_flux_y[FTNREF2D(j,k,x_max+4,x_min-2,y_min-2)]
+(  265)                                                         *(energy1[FTNREF2D(j  ,donor,x_max+4,x_min-2,y_min-2)]+limiter);
+(  266) 
+(  267)       }
+(  268)     }
+(  269)     
+(  270) #pragma omp for private(j)
+
+
+
+PGC Version 13.5          07/18/2014  14:45:43      page 6
+
+
+(  271)     for (k=y_min;k<=y_max;k++) {
+(  272) #pragma ivdep
+(  273)       for (j=x_min;j<=x_max;j++) {
+(  274)         pre_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=density1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  275)                                                           *pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  276)         post_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=pre_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  277)                                                             +mass_flux_y[FTNREF2D(j,k  ,x_max+4,x_min-2,y_min-2)]
+(  278)                                                             -mass_flux_y[FTNREF2D(j,k+1,x_max+4,x_min-2,y_min-2)];
+(  279)         post_ener[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=(energy1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  280)                                                             *pre_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  281)                                                             +ener_flux[FTNREF2D(j,k  ,x_max+5,x_min-2,y_min-2)]
+(  282)                                                             -ener_flux[FTNREF2D(j,k+1,x_max+5,x_min-2,y_min-2)])
+(  283)                                                             /post_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  284)         advec_vol [FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=pre_vol[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  285)                                                              +vol_flux_y[FTNREF2D(j,k  ,x_max+4,x_min-2,y_min-2)]
+(  286)                                                              -vol_flux_y[FTNREF2D(j,k+1,x_max+4,x_min-2,y_min-2)];
+(  287) 
+(  288)         density1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=post_mass[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]/advec_vol[F
+(  289)         energy1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=post_ener[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  290)       }
+(  291)     }
+(  292) 
+(  293)   }
+(  294) 
+(  295)  }
+(  296) 
+(  297) }
+(  298) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

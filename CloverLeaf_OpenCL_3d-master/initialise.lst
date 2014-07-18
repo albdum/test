@@ -1,0 +1,207 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: initialise.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Top level initialisation routine
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Checks for the user input and either invokes the input reader or
+(   21) !>  switches to the internal test problem. It processes the input and strips
+(   22) !>  comments before writing a final input file.
+(   23) !>  It then calls the start routine.
+(   24) 
+(   25) SUBROUTINE initialise
+(   26) 
+(   27)   USE clover_module
+(   28)   USE parse_module
+(   29)   USE report_module
+(   30) 
+(   31)   IMPLICIT NONE
+(   32) 
+(   33)   INTEGER :: ios
+(   34)   INTEGER :: get_unit,stat,uin,out_unit
+(   35) !$ INTEGER :: OMP_GET_THREAD_NUM,OMP_GET_NUM_THREADS
+(   36)   CHARACTER(LEN=g_len_max) :: ltmp
+(   37) 
+(   38)   IF(parallel%boss)THEN
+(   39)     g_out=get_unit(dummy)
+(   40) 
+(   41)     OPEN(FILE='clover.out',ACTION='WRITE',UNIT=g_out,IOSTAT=ios)
+(   42)     IF(ios.NE.0) CALL report_error('initialise','Error opening clover.out file.')
+(   43) 
+(   44)   ELSE
+(   45)     g_out=6
+(   46)   ENDIF
+(   47) 
+(   48) !$OMP PARALLEL
+(   49)   IF(parallel%boss)THEN
+(   50) !$  IF(OMP_GET_THREAD_NUM().EQ.0) THEN
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 2
+
+(   51)       WRITE(g_out,*)
+(   52)       WRITE(g_out,'(a15,f8.3)') 'Clover Version ',g_version
+(   53)       WRITE(g_out,'(a18)') 'MPI Version'
+(   54) !$    WRITE(g_out,'(a18)') 'OpenMP Version'
+(   55)       WRITE(g_out,'(a14,i6)') 'Task Count ',parallel%max_task !MPI
+(   56) !$    WRITE(g_out,'(a15,i5)') 'Thread Count: ',OMP_GET_NUM_THREADS()
+(   57)       WRITE(g_out,*)
+(   58)       WRITE(*,*)'Output file clover.out opened. All output will go there.'
+(   59) !$  ENDIF
+(   60)   ENDIF
+(   61) !$OMP END PARALLEL
+(   62) 
+(   63)   CALL clover_barrier
+(   64) 
+(   65)   IF(parallel%boss)THEN
+(   66)     WRITE(g_out,*) 'Clover will run from the following input:-'
+(   67)     WRITE(g_out,*)
+(   68)   ENDIF
+(   69) 
+(   70)   IF(parallel%boss)THEN
+(   71)     uin=get_unit(dummy)
+(   72) 
+(   73)     OPEN(FILE='clover.in',ACTION='READ',STATUS='OLD',UNIT=uin,IOSTAT=ios)
+(   74)     IF(ios.NE.0) THEN
+(   75)       out_unit=get_unit(dummy)
+(   76)       OPEN(FILE='clover.in',UNIT=out_unit,STATUS='REPLACE',ACTION='WRITE',IOSTAT=ios)
+(   77)       WRITE(out_unit,'(A)')'*clover'
+(   78)       WRITE(out_unit,'(A)')' state 1 density=0.2 energy=1.0'
+(   79)       WRITE(out_unit,'(A)')' state 2 density=1.0 energy=2.5 geometry=cuboid xmin=0.0 xmax=5.0 ymin=0.0 ymax=2.0 zmin=0.0 zmax=2.0'
+(   80)       WRITE(out_unit,'(A)')' x_cells=10'
+(   81)       WRITE(out_unit,'(A)')' y_cells=2'
+(   82)       WRITE(out_unit,'(A)')' z_cells=2'
+(   83)       WRITE(out_unit,'(A)')' xmin=0.0'
+(   84)       WRITE(out_unit,'(A)')' ymin=0.0'
+(   85)       WRITE(out_unit,'(A)')' zmin=0.0'
+(   86)       WRITE(out_unit,'(A)')' xmax=10.0'
+(   87)       WRITE(out_unit,'(A)')' ymax=2.0'
+(   88)       WRITE(out_unit,'(A)')' zmax=2.0'
+(   89)       WRITE(out_unit,'(A)')' initial_timestep=0.04'
+(   90)       WRITE(out_unit,'(A)')' timestep_rise=1.5'
+(   91)       WRITE(out_unit,'(A)')' max_timestep=0.04'
+(   92)       WRITE(out_unit,'(A)')' end_time=3.0'
+(   93)       WRITE(out_unit,'(A)')' test_problem 1'
+(   94)       WRITE(out_unit,'(A)')'*endclover'
+(   95)       CLOSE(out_unit)
+(   96)       uin=get_unit(dummy)
+(   97)       OPEN(FILE='clover.in',ACTION='READ',STATUS='OLD',UNIT=uin,IOSTAT=ios)
+(   98)     ENDIF
+(   99) 
+(  100)     out_unit=get_unit(dummy)
+(  101)     OPEN(FILE='clover.in.tmp',UNIT=out_unit,STATUS='REPLACE',ACTION='WRITE',IOSTAT=ios)
+(  102)     IF(ios.NE.0) CALL  report_error('initialise','Error opening clover.in.tmp file')
+(  103)     stat=parse_init(uin,'')
+(  104)     DO
+(  105)        stat=parse_getline(-1_4)
+(  106)        IF(stat.NE.0)EXIT
+(  107)        WRITE(out_unit,'(A)') line
+(  108)     ENDDO
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 3
+
+(  109)     CLOSE(out_unit)
+(  110)   ENDIF
+(  111) 
+(  112)   CALL clover_barrier
+(  113) 
+(  114)   g_in=get_unit(dummy)
+(  115)   OPEN(FILE='clover.in.tmp',ACTION='READ',STATUS='OLD',UNIT=g_in,IOSTAT=ios)
+(  116) 
+(  117)   IF(ios.NE.0) CALL report_error('initialise','Error opening clover.in.tmp file')
+(  118) 
+(  119)   CALL clover_barrier
+(  120) 
+(  121)   IF(parallel%boss)THEN
+(  122)      REWIND(uin)
+(  123)      DO 
+(  124)         READ(UNIT=uin,IOSTAT=ios,FMT='(a150)') ltmp ! Read in next line.
+(  125)         IF(ios.NE.0)EXIT
+(  126)         WRITE(g_out,FMT='(a150)') ltmp
+(  127)      ENDDO
+(  128)   ENDIF
+(  129) 
+(  130)   IF(parallel%boss)THEN
+(  131)      WRITE(g_out,*)
+(  132)      WRITE(g_out,*) 'Initialising and generating'
+(  133)      WRITE(g_out,*)
+(  134)   ENDIF
+(  135) 
+(  136)   CALL read_input()
+(  137) 
+(  138)   CALL clover_barrier
+(  139) 
+(  140)   step=0
+(  141) 
+(  142)   CALL start
+(  143) 
+(  144)   CALL clover_barrier
+(  145) 
+(  146)   IF(parallel%boss)THEN
+(  147)      WRITE(g_out,*) 'Starting the calculation'
+(  148)   ENDIF
+(  149) 
+(  150)   CLOSE(g_in)
+(  151) 
+(  152) END SUBROUTINE initialise
+(  153) 
+(  154) FUNCTION get_unit(dummy)
+(  155)   INTEGER :: get_unit,dummy
+(  156) 
+(  157)   INTEGER :: u
+(  158)   LOGICAL :: used
+(  159) 
+(  160)   DO u=7,99
+(  161)      INQUIRE(UNIT=u,OPENED=used)
+(  162)      IF(.NOT.used)THEN
+(  163)         EXIT
+(  164)      ENDIF
+(  165)   ENDDO
+(  166) 
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:26      page 4
+
+(  167)   get_unit=u
+(  168) 
+(  169) END FUNCTION get_unit

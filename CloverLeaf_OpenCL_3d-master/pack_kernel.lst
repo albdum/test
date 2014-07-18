@@ -1,0 +1,821 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: pack_kernel.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Fortran mpi buffer packing kernel
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Packs/unpacks mpi send and receive buffers
+(   21) 
+(   22) ! Notes
+(   23) ! All the 1d indices need updateing to 3d
+(   24) 
+(   25) MODULE pack_kernel_module
+(   26) 
+(   27) CONTAINS
+(   28) 
+(   29) SUBROUTINE clover_pack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(   30)                                     left_snd_buffer,                                           &
+(   31)                                     CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(   32)                                     depth,field_type,                                          &
+(   33)                                     buffer_offset)
+(   34) 
+(   35)   IMPLICIT NONE
+(   36) 
+(   37)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(   38)   REAL(KIND=8) :: left_snd_buffer(:)
+(   39) 
+(   40)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(   41)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(   42)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(   43) 
+(   44)   ! Pack 
+(   45) 
+(   46)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(   47)   IF(field_type.EQ.CELL_DATA) THEN
+(   48)     x_inc=0
+(   49)     y_inc=0
+(   50)     z_inc=0
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 2
+
+(   51)   ENDIF
+(   52)   IF(field_type.EQ.VERTEX_DATA) THEN
+(   53)     x_inc=1
+(   54)     y_inc=1
+(   55)     z_inc=1
+(   56)   ENDIF
+(   57)   IF(field_type.EQ.X_FACE_DATA) THEN
+(   58)     x_inc=1
+(   59)     y_inc=0
+(   60)     z_inc=0
+(   61)   ENDIF
+(   62)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(   63)     x_inc=0
+(   64)     y_inc=1
+(   65)     z_inc=0
+(   66)   ENDIF
+(   67)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(   68)     x_inc=0
+(   69)     y_inc=0
+(   70)     z_inc=1
+(   71)   ENDIF
+(   72) 
+(   73) !$OMP PARALLEL DO PRIVATE(index)
+(   74)   DO l=z_min-depth,z_max+z_inc+depth
+(   75)     DO k=y_min-depth,y_max+y_inc+depth
+(   76)       DO j=1,depth
+(   77)         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
+(   78)         left_snd_buffer(index)=field(x_min+x_inc-1+j,k,l)
+(   79)       ENDDO
+(   80)     ENDDO
+(   81)   ENDDO
+(   82) !$OMP END PARALLEL DO
+(   83) 
+(   84) END SUBROUTINE clover_pack_message_left
+(   85) 
+(   86) SUBROUTINE clover_unpack_message_left(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(   87)                                       left_rcv_buffer,                                           &
+(   88)                                       CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(   89)                                       depth,field_type,                                          &
+(   90)                                       buffer_offset)
+(   91) 
+(   92)   IMPLICIT NONE
+(   93) 
+(   94)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(   95)   REAL(KIND=8) :: left_rcv_buffer(:)
+(   96) 
+(   97)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(   98)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(   99)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  100) 
+(  101)   ! Unpack 
+(  102) 
+(  103)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  104)   IF(field_type.EQ.CELL_DATA) THEN
+(  105)     x_inc=0
+(  106)     y_inc=0
+(  107)     z_inc=0
+(  108)   ENDIF
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 3
+
+(  109)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  110)     x_inc=1
+(  111)     y_inc=1
+(  112)     z_inc=1
+(  113)   ENDIF
+(  114)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  115)     x_inc=1
+(  116)     y_inc=0
+(  117)     z_inc=0
+(  118)   ENDIF
+(  119)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  120)     x_inc=0
+(  121)     y_inc=1
+(  122)     z_inc=0
+(  123)   ENDIF
+(  124)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  125)     x_inc=0
+(  126)     y_inc=0
+(  127)     z_inc=1
+(  128)   ENDIF
+(  129) 
+(  130) !$OMP PARALLEL DO PRIVATE(index)
+(  131)   DO l=z_min-depth,z_max+z_inc+depth
+(  132)     DO k=y_min-depth,y_max+y_inc+depth
+(  133)       DO j=1,depth
+(  134)         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
+(  135)         field(x_min-j,k,l)=left_rcv_buffer(index)
+(  136)       ENDDO
+(  137)     ENDDO
+(  138)   ENDDO
+(  139) !$OMP END PARALLEL DO
+(  140) 
+(  141) END SUBROUTINE clover_unpack_message_left
+(  142) 
+(  143) SUBROUTINE clover_pack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  144)                                      right_snd_buffer,                                          &
+(  145)                                      CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  146)                                      depth,field_type,                                          &
+(  147)                                      buffer_offset)
+(  148) 
+(  149)   IMPLICIT NONE
+(  150) 
+(  151)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  152)   REAL(KIND=8) :: right_snd_buffer(:)
+(  153) 
+(  154)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  155)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  156)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  157) 
+(  158)   ! Pack 
+(  159) 
+(  160)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  161)   IF(field_type.EQ.CELL_DATA) THEN
+(  162)     x_inc=0
+(  163)     y_inc=0
+(  164)     z_inc=0
+(  165)   ENDIF
+(  166)   IF(field_type.EQ.VERTEX_DATA) THEN
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 4
+
+(  167)     x_inc=1
+(  168)     y_inc=1
+(  169)     z_inc=1
+(  170)   ENDIF
+(  171)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  172)     x_inc=1
+(  173)     y_inc=0
+(  174)     z_inc=0
+(  175)   ENDIF
+(  176)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  177)     x_inc=0
+(  178)     y_inc=1
+(  179)     z_inc=0
+(  180)   ENDIF
+(  181)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  182)     x_inc=0
+(  183)     y_inc=0
+(  184)     z_inc=1
+(  185)   ENDIF
+(  186) 
+(  187) !$OMP PARALLEL DO PRIVATE(index)
+(  188)   DO l=z_min-depth,z_max+z_inc+depth
+(  189)     DO k=y_min-depth,y_max+y_inc+depth
+(  190)       DO j=1,depth
+(  191)         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
+(  192)         right_snd_buffer(index)=field(x_max+1-j,k,l)
+(  193)       ENDDO
+(  194)     ENDDO
+(  195)   ENDDO
+(  196) !$OMP END PARALLEL DO
+(  197) 
+(  198) END SUBROUTINE clover_pack_message_right
+(  199) 
+(  200) SUBROUTINE clover_unpack_message_right(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  201)                                        right_rcv_buffer,                                          &
+(  202)                                        CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  203)                                        depth,field_type,                                          &
+(  204)                                        buffer_offset)
+(  205) 
+(  206)   IMPLICIT NONE
+(  207) 
+(  208)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  209)   REAL(KIND=8) :: right_rcv_buffer(:)
+(  210) 
+(  211)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  212)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  213)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  214) 
+(  215)   ! Unpack 
+(  216) 
+(  217)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  218)   IF(field_type.EQ.CELL_DATA) THEN
+(  219)     x_inc=0
+(  220)     y_inc=0
+(  221)     z_inc=0
+(  222)   ENDIF
+(  223)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  224)     x_inc=1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 5
+
+(  225)     y_inc=1
+(  226)     z_inc=1
+(  227)   ENDIF
+(  228)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  229)     x_inc=1
+(  230)     y_inc=0
+(  231)     z_inc=0
+(  232)   ENDIF
+(  233)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  234)     x_inc=0
+(  235)     y_inc=1
+(  236)     z_inc=0
+(  237)   ENDIF
+(  238)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  239)     x_inc=0
+(  240)     y_inc=0
+(  241)     z_inc=1
+(  242)   ENDIF
+(  243) 
+(  244) !$OMP PARALLEL DO PRIVATE(index)
+(  245)   DO l=z_min-depth,z_max+z_inc+depth
+(  246)     DO k=y_min-depth,y_max+y_inc+depth
+(  247)       DO j=1,depth
+(  248)         index=buffer_offset + (j+(k+depth-1)*depth) + ((l+depth-1)*(y_max+y_inc+2*depth)*depth)
+(  249)         field(x_max+x_inc+j,k,l)=right_rcv_buffer(index)
+(  250)       ENDDO
+(  251)     ENDDO
+(  252)   ENDDO
+(  253) !$OMP END PARALLEL DO
+(  254) 
+(  255) END SUBROUTINE clover_unpack_message_right
+(  256) 
+(  257) SUBROUTINE clover_pack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  258)                                    top_snd_buffer,                                            &
+(  259)                                    CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  260)                                    depth,field_type,                                          &
+(  261)                                    buffer_offset)
+(  262) 
+(  263)   IMPLICIT NONE
+(  264) 
+(  265)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  266)   REAL(KIND=8) :: top_snd_buffer(:)
+(  267) 
+(  268)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  269)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  270)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  271) 
+(  272)   ! Pack 
+(  273) 
+(  274)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  275)   IF(field_type.EQ.CELL_DATA) THEN
+(  276)     x_inc=0
+(  277)     y_inc=0
+(  278)     z_inc=0
+(  279)   ENDIF
+(  280)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  281)     x_inc=1
+(  282)     y_inc=1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 6
+
+(  283)     z_inc=1
+(  284)   ENDIF
+(  285)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  286)     x_inc=1
+(  287)     y_inc=0
+(  288)     z_inc=0
+(  289)   ENDIF
+(  290)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  291)     x_inc=0
+(  292)     y_inc=1
+(  293)     z_inc=0
+(  294)   ENDIF
+(  295)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  296)     x_inc=0
+(  297)     y_inc=0
+(  298)     z_inc=1
+(  299)   ENDIF
+(  300) 
+(  301)   DO k=1,depth
+(  302) !$OMP PARALLEL DO PRIVATE(index)
+(  303)     DO l=z_min-depth,z_max+z_inc+depth
+(  304)       DO j=x_min-depth,x_max+x_inc+depth
+(  305)         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
+(  306)         top_snd_buffer(index)=field(j,y_max+1-k,l)
+(  307)       ENDDO
+(  308)     ENDDO
+(  309) !$OMP END PARALLEL DO
+(  310)   ENDDO
+(  311) 
+(  312) END SUBROUTINE clover_pack_message_top
+(  313) 
+(  314) SUBROUTINE clover_unpack_message_top(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  315)                                      top_rcv_buffer,                                            &
+(  316)                                      CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  317)                                      depth,field_type,                                          &
+(  318)                                      buffer_offset)
+(  319) 
+(  320)   IMPLICIT NONE
+(  321) 
+(  322)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  323)   REAL(KIND=8) :: top_rcv_buffer(:)
+(  324) 
+(  325)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  326)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  327)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  328) 
+(  329)   ! Unpack 
+(  330) 
+(  331)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  332)   IF(field_type.EQ.CELL_DATA) THEN
+(  333)     x_inc=0
+(  334)     y_inc=0
+(  335)     z_inc=0
+(  336)   ENDIF
+(  337)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  338)     x_inc=1
+(  339)     y_inc=1
+(  340)     z_inc=1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 7
+
+(  341)   ENDIF
+(  342)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  343)     x_inc=1
+(  344)     y_inc=0
+(  345)     z_inc=0
+(  346)   ENDIF
+(  347)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  348)     x_inc=0
+(  349)     y_inc=1
+(  350)     z_inc=0
+(  351)   ENDIF
+(  352)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  353)     x_inc=0
+(  354)     y_inc=0
+(  355)     z_inc=1
+(  356)   ENDIF
+(  357) 
+(  358)   DO k=1,depth
+(  359) !$OMP PARALLEL DO PRIVATE(index)
+(  360)     DO l=z_min-depth,z_max+z_inc+depth
+(  361)       DO j=x_min-depth,x_max+x_inc+depth
+(  362)         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
+(  363)         field(j,y_max+y_inc+k,l)=top_rcv_buffer(index)
+(  364)       ENDDO
+(  365)     ENDDO
+(  366) !$OMP END PARALLEL DO
+(  367)   ENDDO
+(  368) 
+(  369) END SUBROUTINE clover_unpack_message_top
+(  370) 
+(  371) SUBROUTINE clover_pack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  372)                                       bottom_snd_buffer,                                         &
+(  373)                                       CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  374)                                       depth,field_type,                                          &
+(  375)                                       buffer_offset)
+(  376) 
+(  377)   IMPLICIT NONE
+(  378) 
+(  379)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  380)   REAL(KIND=8) :: bottom_snd_buffer(:)
+(  381) 
+(  382)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  383)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  384)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  385) 
+(  386)   ! Pack 
+(  387) 
+(  388)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  389)   IF(field_type.EQ.CELL_DATA) THEN
+(  390)     x_inc=0
+(  391)     y_inc=0
+(  392)     z_inc=0
+(  393)   ENDIF
+(  394)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  395)     x_inc=1
+(  396)     y_inc=1
+(  397)     z_inc=1
+(  398)   ENDIF
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 8
+
+(  399)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  400)     x_inc=1
+(  401)     y_inc=0
+(  402)     z_inc=0
+(  403)   ENDIF
+(  404)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  405)     x_inc=0
+(  406)     y_inc=1
+(  407)     z_inc=0
+(  408)   ENDIF
+(  409)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  410)     x_inc=0
+(  411)     y_inc=0
+(  412)     z_inc=1
+(  413)   ENDIF
+(  414) 
+(  415)   DO k=1,depth
+(  416) !$OMP PARALLEL DO PRIVATE(index)
+(  417)     DO l=z_min-depth,z_max+z_inc+depth
+(  418)       DO j=x_min-depth,x_max+x_inc+depth
+(  419)         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
+(  420)         bottom_snd_buffer(index)=field(j,y_min+y_inc-1+k,l)
+(  421)       ENDDO
+(  422)     ENDDO
+(  423) !$OMP END PARALLEL DO
+(  424)   ENDDO
+(  425) 
+(  426) END SUBROUTINE clover_pack_message_bottom
+(  427) 
+(  428) SUBROUTINE clover_unpack_message_bottom(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  429)                                         bottom_rcv_buffer,                                         &
+(  430)                                         CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  431)                                         depth,field_type,                                          &
+(  432)                                         buffer_offset)
+(  433) 
+(  434)   IMPLICIT NONE
+(  435) 
+(  436)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  437)   REAL(KIND=8) :: bottom_rcv_buffer(:)
+(  438) 
+(  439)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  440)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  441)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  442) 
+(  443)   ! Unpack 
+(  444) 
+(  445)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  446)   IF(field_type.EQ.CELL_DATA) THEN
+(  447)     x_inc=0
+(  448)     y_inc=0
+(  449)     z_inc=0
+(  450)   ENDIF
+(  451)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  452)     x_inc=1
+(  453)     y_inc=1
+(  454)     z_inc=1
+(  455)   ENDIF
+(  456)   IF(field_type.EQ.X_FACE_DATA) THEN
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 9
+
+(  457)     x_inc=1
+(  458)     y_inc=0
+(  459)     z_inc=0
+(  460)   ENDIF
+(  461)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  462)     x_inc=0
+(  463)     y_inc=1
+(  464)     z_inc=0
+(  465)   ENDIF
+(  466)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  467)     x_inc=0
+(  468)     y_inc=0
+(  469)     z_inc=1
+(  470)   ENDIF
+(  471) 
+(  472)   DO k=1,depth
+(  473) !$OMP PARALLEL DO PRIVATE(index)
+(  474)     DO l=z_min-depth,z_max+z_inc+depth
+(  475)       DO j=x_min-depth,x_max+x_inc+depth
+(  476)         index= buffer_offset + (j+depth) + (l-1+depth)*(x_max+x_inc+2*depth) + (k-1)*((x_max+x_inc+2*depth)*(z_max+z_inc+2*depth))
+(  477)         field(j,y_min-k,l)=bottom_rcv_buffer(index)
+(  478)       ENDDO
+(  479)     ENDDO
+(  480) !$OMP END PARALLEL DO
+(  481)   ENDDO
+(  482) 
+(  483) END SUBROUTINE clover_unpack_message_bottom
+(  484) 
+(  485) SUBROUTINE clover_pack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  486)                                     back_snd_buffer,                                           &
+(  487)                                     CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  488)                                     depth,field_type,                                          &
+(  489)                                     buffer_offset)
+(  490) 
+(  491)   IMPLICIT NONE
+(  492) 
+(  493)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  494)   REAL(KIND=8) :: back_snd_buffer(:)
+(  495) 
+(  496)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  497)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  498)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  499) 
+(  500)   ! Pack 
+(  501) 
+(  502)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  503)   IF(field_type.EQ.CELL_DATA) THEN
+(  504)     x_inc=0
+(  505)     y_inc=0
+(  506)     z_inc=0
+(  507)   ENDIF
+(  508)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  509)     x_inc=1
+(  510)     y_inc=1
+(  511)     z_inc=1
+(  512)   ENDIF
+(  513)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  514)     x_inc=1
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 10
+
+(  515)     y_inc=0
+(  516)     z_inc=0
+(  517)   ENDIF
+(  518)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  519)     x_inc=0
+(  520)     y_inc=1
+(  521)     z_inc=0
+(  522)   ENDIF
+(  523)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  524)     x_inc=0
+(  525)     y_inc=0
+(  526)     z_inc=1
+(  527)   ENDIF
+(  528) 
+(  529)   DO l=1,depth
+(  530) !$OMP PARALLEL DO PRIVATE(index)
+(  531)     DO k=y_min-depth,y_max+y_inc+depth
+(  532)       DO j=x_min-depth,x_max+x_inc+depth
+(  533)         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
+(  534)         back_snd_buffer(index)=field(j,k,z_min+z_inc-1+l)
+(  535)       ENDDO
+(  536)     ENDDO
+(  537) !$OMP END PARALLEL DO
+(  538)   ENDDO
+(  539) 
+(  540) END SUBROUTINE clover_pack_message_back
+(  541) 
+(  542) SUBROUTINE clover_unpack_message_back(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  543)                                       back_rcv_buffer,                                           &
+(  544)                                       CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  545)                                       depth,field_type,                                          &
+(  546)                                       buffer_offset)
+(  547) 
+(  548)   IMPLICIT NONE
+(  549) 
+(  550)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  551)   REAL(KIND=8) :: back_rcv_buffer(:)
+(  552) 
+(  553)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  554)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  555)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  556) 
+(  557)   ! Unpack 
+(  558) 
+(  559)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  560)   IF(field_type.EQ.CELL_DATA) THEN
+(  561)     x_inc=0
+(  562)     y_inc=0
+(  563)     z_inc=0
+(  564)   ENDIF
+(  565)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  566)     x_inc=1
+(  567)     y_inc=1
+(  568)     z_inc=1
+(  569)   ENDIF
+(  570)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  571)     x_inc=1
+(  572)     y_inc=0
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 11
+
+(  573)     z_inc=0
+(  574)   ENDIF
+(  575)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  576)     x_inc=0
+(  577)     y_inc=1
+(  578)     z_inc=0
+(  579)   ENDIF
+(  580)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  581)     x_inc=0
+(  582)     y_inc=0
+(  583)     z_inc=1
+(  584)   ENDIF
+(  585) 
+(  586)   DO l=1,depth
+(  587) !$OMP PARALLEL DO PRIVATE(index)
+(  588)     DO k=y_min-depth,y_max+y_inc+depth
+(  589)       DO j=x_min-depth,x_max+x_inc+depth
+(  590)         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
+(  591)         field(j,k,z_min-l)=back_rcv_buffer(index)
+(  592)       ENDDO
+(  593)     ENDDO
+(  594) !$OMP END PARALLEL DO
+(  595)   ENDDO
+(  596) 
+(  597) END SUBROUTINE clover_unpack_message_back
+(  598) 
+(  599) SUBROUTINE clover_pack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field,                 &
+(  600)                                      front_snd_buffer,                                          &
+(  601)                                      CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  602)                                      depth,field_type,                                          &
+(  603)                                      buffer_offset)
+(  604) 
+(  605)   IMPLICIT NONE
+(  606) 
+(  607)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  608)   REAL(KIND=8) :: front_snd_buffer(:)
+(  609)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  610)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  611)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  612) 
+(  613)   ! Pack 
+(  614) 
+(  615)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  616)   IF(field_type.EQ.CELL_DATA) THEN
+(  617)     x_inc=0
+(  618)     y_inc=0
+(  619)     z_inc=0
+(  620)   ENDIF
+(  621)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  622)     x_inc=1
+(  623)     y_inc=1
+(  624)     z_inc=1
+(  625)   ENDIF
+(  626)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  627)     x_inc=1
+(  628)     y_inc=0
+(  629)     z_inc=0
+(  630)   ENDIF
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 12
+
+(  631)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  632)     x_inc=0
+(  633)     y_inc=1
+(  634)     z_inc=0
+(  635)   ENDIF
+(  636)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  637)     x_inc=0
+(  638)     y_inc=0
+(  639)     z_inc=1
+(  640)   ENDIF
+(  641) 
+(  642)   DO l=1,depth
+(  643) !$OMP PARALLEL DO PRIVATE(index)
+(  644)     DO k=y_min-depth,y_max+y_inc+depth
+(  645)       DO j=x_min-depth,x_max+x_inc+depth
+(  646)         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + (l-1)*((x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
+(  647)         front_snd_buffer(index)=field(j,k,z_max+1-l)
+(  648)       ENDDO
+(  649)     ENDDO
+(  650) !$OMP END PARALLEL DO
+(  651)   ENDDO
+(  652) 
+(  653) END SUBROUTINE clover_pack_message_front
+(  654) 
+(  655) SUBROUTINE clover_unpack_message_front(x_min,x_max,y_min,y_max,z_min,z_max,field,                &
+(  656)                                       front_rcv_buffer,                                          &
+(  657)                                       CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA, &
+(  658)                                       depth,field_type,                                          &
+(  659)                                       buffer_offset)
+(  660) 
+(  661)   IMPLICIT NONE
+(  662) 
+(  663)   REAL(KIND=8) :: field(-1:,-1:,-1:) ! This seems to work for any type of mesh data
+(  664)   REAL(KIND=8) :: front_rcv_buffer(:)
+(  665)   INTEGER      :: CELL_DATA,VERTEX_DATA,X_FACE_DATA,Y_FACE_DATA,Z_FACE_DATA
+(  666)   INTEGER      :: depth,field_type,x_min,x_max,y_min,y_max,z_min,z_max
+(  667)   INTEGER      :: j,k,l,x_inc,y_inc,z_inc,index,buffer_offset
+(  668) 
+(  669)   ! Unpack 
+(  670) 
+(  671)   ! These array modifications still need to be added on, plus the donor data location changes as in update_halo
+(  672)   IF(field_type.EQ.CELL_DATA) THEN
+(  673)     x_inc=0
+(  674)     y_inc=0
+(  675)     z_inc=0
+(  676)   ENDIF
+(  677)   IF(field_type.EQ.VERTEX_DATA) THEN
+(  678)     x_inc=1
+(  679)     y_inc=1
+(  680)     z_inc=1
+(  681)   ENDIF
+(  682)   IF(field_type.EQ.X_FACE_DATA) THEN
+(  683)     x_inc=1
+(  684)     y_inc=0
+(  685)     z_inc=0
+(  686)   ENDIF
+(  687)   IF(field_type.EQ.Y_FACE_DATA) THEN
+(  688)     x_inc=0
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:11      page 13
+
+(  689)     y_inc=1
+(  690)     z_inc=0
+(  691)   ENDIF
+(  692)   IF(field_type.EQ.Z_FACE_DATA) THEN
+(  693)     x_inc=0
+(  694)     y_inc=0
+(  695)     z_inc=1
+(  696)   ENDIF
+(  697) 
+(  698)   DO l=1,depth
+(  699) !$OMP PARALLEL DO PRIVATE(index)
+(  700)     DO k=y_min-depth,y_max+y_inc+depth
+(  701)       DO j=x_min-depth,x_max+x_inc+depth
+(  702)         index= buffer_offset + (j+depth) + (k-1+depth)*(x_max+x_inc+2*depth) + ((l-1)*(x_max+x_inc+2*depth)*(y_max+y_inc+2*depth))
+(  703)         field(j,k,z_max+z_inc+l)=front_rcv_buffer(index)
+(  704)       ENDDO
+(  705)     ENDDO
+(  706) !$OMP END PARALLEL DO
+(  707)   ENDDO
+(  708) 
+(  709) END SUBROUTINE clover_unpack_message_front
+(  710) 
+(  711) END MODULE pack_kernel_module

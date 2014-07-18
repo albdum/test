@@ -1,0 +1,109 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:36      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: reset_field.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Reset field driver
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invokes the user specified field reset kernel.
+(   21) 
+(   22) MODULE reset_field_module
+(   23) 
+(   24) CONTAINS
+(   25) 
+(   26) SUBROUTINE reset_field()
+(   27) 
+(   28)   USE clover_module
+(   29)   USE reset_field_kernel_module
+(   30) 
+(   31)   IMPLICIT NONE
+(   32) 
+(   33)   INTEGER :: c
+(   34) 
+(   35)   REAL(KIND=8) :: kernel_time,timer
+(   36) 
+(   37)   IF(profiler_on) kernel_time=timer()
+(   38)   DO c=1,chunks_per_task
+(   39) 
+(   40)     IF(chunks(c)%task.EQ.parallel%task) THEN
+(   41) 
+(   42)       IF(use_fortran_kernels)THEN
+(   43)         CALL reset_field_kernel(chunks(c)%field%x_min,   &
+(   44)                               chunks(c)%field%x_max,     &
+(   45)                               chunks(c)%field%y_min,     &
+(   46)                               chunks(c)%field%y_max,     &
+(   47)                               chunks(c)%field%z_min,     &
+(   48)                               chunks(c)%field%z_max,     &
+(   49)                               chunks(c)%field%density0,  &
+(   50)                               chunks(c)%field%density1,  &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:36      page 2
+
+(   51)                               chunks(c)%field%energy0,   &
+(   52)                               chunks(c)%field%energy1,   &
+(   53)                               chunks(c)%field%xvel0,     &
+(   54)                               chunks(c)%field%xvel1,     &
+(   55)                               chunks(c)%field%yvel0,     &
+(   56)                               chunks(c)%field%yvel1,     &
+(   57)                               chunks(c)%field%zvel0,     &
+(   58)                               chunks(c)%field%zvel1      )
+(   59)       ELSEIF(use_opencl_kernels)THEN
+(   60) 	CALL reset_field_kernel_ocl()
+(   61)       ELSEIF(use_C_kernels)THEN
+(   62)         CALL reset_field_kernel_c(chunks(c)%field%x_min, &
+(   63)                               chunks(c)%field%x_max,     &
+(   64)                               chunks(c)%field%y_min,     &
+(   65)                               chunks(c)%field%y_max,     &
+(   66)                               chunks(c)%field%z_min,     &
+(   67)                               chunks(c)%field%z_max,     &
+(   68)                               chunks(c)%field%density0,  &
+(   69)                               chunks(c)%field%density1,  &
+(   70)                               chunks(c)%field%energy0,   &
+(   71)                               chunks(c)%field%energy1,   &
+(   72)                               chunks(c)%field%xvel0,     &
+(   73)                               chunks(c)%field%xvel1,     &
+(   74)                               chunks(c)%field%yvel0,     &
+(   75)                               chunks(c)%field%yvel1,     &
+(   76)                               chunks(c)%field%zvel0,     &
+(   77)                               chunks(c)%field%zvel1      )
+(   78)       ENDIF
+(   79) 
+(   80)     ENDIF
+(   81) 
+(   82)   ENDDO
+(   83)   IF(profiler_on) profiler%reset=profiler%reset+(timer()-kernel_time)
+(   84) 
+(   85) END SUBROUTINE reset_field
+(   86) 
+(   87) END MODULE reset_field_module

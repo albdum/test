@@ -1,0 +1,264 @@
+PGC Version 13.5          07/18/2014  14:45:38      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: PdV_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C PdV kernel.
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details Calculates the change in energy and density in a cell using the
+(   22)  *  change on cell volume due to the velocity gradients in a cell. The time
+(   23)  *  level of the velocity data depends on whether it is invoked as the
+(   24)  *  predictor or corrector.
+(   25)  */
+(   26) 
+(   27) #include <stdio.h>
+(   28) #include <stdlib.h>
+(   29) #include "ftocmacros.h"
+(   30) #include <math.h>
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 2
+
+
+(   31) 
+(   32) void pdv_kernel_c_(int *prdct,
+(   33)                    int *xmin,int *xmax,int *ymin,int *ymax,
+(   34)                 double *dtbyt,
+(   35)                 double *xarea,
+(   36)                 double *yarea,
+(   37)                 double *volume,
+(   38)                 double *density0,
+(   39)                 double *density1,
+(   40)                 double *energy0,
+(   41)                 double *energy1,
+(   42)                 double *pressure,
+(   43)                 double *viscosity,
+(   44)                 double *xvel0,
+(   45)                 double *xvel1,
+(   46)                 double *yvel0,
+(   47)                 double *yvel1,
+(   48)                 double *volume_change)
+(   49) {
+(   50)   int predict=*prdct;
+(   51)   int x_min=*xmin;
+(   52)   int x_max=*xmax;
+(   53)   int y_min=*ymin;
+(   54)   int y_max=*ymax;
+(   55)   double dt=*dtbyt;
+(   56) 
+(   57)   int j,k;
+(   58)   double recip_volume,energy_change,min_cell_volume,right_flux,left_flux,top_flux,bottom_flux,total_flux;
+(   59)   
+(   60) #pragma omp parallel
+(   61)  {
+(   62) 
+(   63)   if(predict==0) {
+(   64)     
+(   65) #pragma omp for private(right_flux,left_flux,top_flux,bottom_flux,total_flux,min_cell_volume,energy_change,recip_volume,j)
+(   66)     for (k=y_min;k<=y_max;k++) {
+(   67) #pragma ivdep
+(   68)       for (j=x_min;j<=x_max;j++) {
+(   69)         left_flux=  (xarea[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)])
+(   70)                                    *(xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   71)                                     +xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(   72)                                     +xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   73)                                     +xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)])
+(   74)                                     *0.25*dt*0.5;
+(   75)         right_flux= (xarea[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)])
+(   76)                                    *(xvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   77)                                     +xvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)]
+(   78)                                     +xvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   79)                                     +xvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])
+(   80)                                     *0.25*dt*0.5;
+(   81)         bottom_flux=(yarea[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)])
+(   82)                                    *(yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   83)                                     +yvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   84)                                     +yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   85)                                     +yvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)])
+(   86)                                     *0.25*dt*0.5;
+(   87)         top_flux=   (yarea[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)])
+(   88)                                    *(yvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(   89)                                     +yvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)]
+(   90)                                     +yvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 3
+
+
+(   91)                                     +yvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])
+(   92)                                     *0.25*dt*0.5;
+(   93) 
+(   94)         total_flux=right_flux-left_flux+top_flux-bottom_flux;
+(   95) 
+(   96)         volume_change[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(   97)                                                          /(volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+total_flux);
+(   98) 
+(   99)         min_cell_volume=MIN(volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+right_flux-left_flux+top_flux-bottom_flux
+(  100)                            ,MIN(volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+right_flux-left_flux
+(  101)                            ,volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+top_flux-bottom_flux));
+(  102) 
+(  103)         recip_volume=1.0/volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(  104) 
+(  105)         energy_change=(pressure[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]/density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2
+(  106)                      +viscosity[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]/density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2
+(  107)                       *total_flux*recip_volume;
+(  108) 
+(  109)         energy1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=energy0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]-energy_change;
+(  110) 
+(  111)         density1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  112)                                                            *volume_change[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  113) 
+(  114)       }
+(  115)     }
+(  116)   }
+(  117)   else{
+(  118) #pragma omp for private(right_flux,left_flux,top_flux,bottom_flux,total_flux,min_cell_volume,energy_change,recip_volume,j)
+(  119)     for (k=y_min;k<=y_max;k++) {
+(  120) #pragma ivdep
+(  121)       for (j=x_min;j<=x_max;j++) {
+(  122)         left_flux=  (xarea[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)])
+(  123)                                    *(xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  124)                                     +xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(  125)                                     +xvel1[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  126)                                     +xvel1[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)])
+(  127)                                     *0.25*dt;
+(  128)         right_flux= (xarea[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)])
+(  129)                                    *(xvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(  130)                                     +xvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)]
+(  131)                                     +xvel1[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(  132)                                     +xvel1[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])
+(  133)                                     *0.25*dt;
+(  134)         bottom_flux=(yarea[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)])
+(  135)                                    *(yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  136)                                     +yvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(  137)                                     +yvel1[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(  138)                                     +yvel1[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)])
+(  139)                                     *0.25*dt;
+(  140)         top_flux=   (yarea[FTNREF2D(j  ,k+1,x_max+4,x_min-2,y_min-2)])
+(  141)                                    *(yvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(  142)                                     +yvel0[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)]
+(  143)                                     +yvel1[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(  144)                                     +yvel1[FTNREF2D(j+1,k+1,x_max+5,x_min-2,y_min-2)])
+(  145)                                     *0.25*dt;
+(  146) 
+(  147)         total_flux=right_flux-left_flux+top_flux-bottom_flux;
+(  148) 
+(  149)         volume_change[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  150)                                                          /(volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+total_flux);
+
+
+
+PGC Version 13.5          07/18/2014  14:45:38      page 4
+
+
+(  151) 
+(  152)         min_cell_volume=MIN(volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+right_flux-left_flux+top_flux-bottom_flux
+(  153)                            ,MIN(volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+right_flux-left_flux
+(  154)                            ,volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]+top_flux-bottom_flux));
+(  155) 
+(  156)         recip_volume=1.0/volume[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)];
+(  157) 
+(  158)         energy_change=(pressure[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]/density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2
+(  159)                      +viscosity[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]/density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2
+(  160)                       *total_flux*recip_volume;
+(  161) 
+(  162)         energy1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=energy0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]-energy_change;
+(  163) 
+(  164)         density1[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(  165)                                                            *volume_change[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)];
+(  166) 
+(  167)       }
+(  168)     }
+(  169) 
+(  170)   }
+(  171) 
+(  172)  }
+(  173) 
+(  174) }
+(  175) 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

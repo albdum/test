@@ -1,0 +1,86 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:24      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: ideal_gas_kernel.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Fortran ideal gas kernel.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Calculates the pressure and sound speed for the mesh chunk using
+(   21) !>  the ideal gas equation of state, with a fixed gamma of 1.4.
+(   22) 
+(   23) MODULE ideal_gas_kernel_module
+(   24) 
+(   25) CONTAINS
+(   26) 
+(   27) SUBROUTINE ideal_gas_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
+(   28)                             density,                                &
+(   29)                             energy,                                 &
+(   30)                             pressure,                               &
+(   31)                             soundspeed                              )                              
+(   32) 
+(   33)   IMPLICIT NONE
+(   34) 
+(   35)   INTEGER :: x_min,x_max,y_min,y_max,z_min,z_max
+(   36)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: density
+(   37)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: energy
+(   38)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: pressure
+(   39)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: soundspeed
+(   40) 
+(   41)   INTEGER :: j,k,l
+(   42) 
+(   43)   REAL(KIND=8) :: sound_speed_squared,v,pressurebyenergy,pressurebyvolume
+(   44) 
+(   45) !$OMP PARALLEL
+(   46) !$OMP DO PRIVATE(v,pressurebyenergy,pressurebyvolume,sound_speed_squared)
+(   47)   DO l=z_min,z_max
+(   48)     DO k=y_min,y_max
+(   49)       DO j=x_min,x_max
+(   50)         v=1.0_8/density(j,k,l)
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:24      page 2
+
+(   51)         pressure(j,k,l)=(1.4_8-1.0_8)*density(j,k,l)*energy(j,k,l)
+(   52)         pressurebyenergy=(1.4_8-1.0_8)*density(j,k,l)
+(   53)         pressurebyvolume=-density(j,k,l)*pressure(j,k,l)
+(   54)         sound_speed_squared=v*v*(pressure(j,k,l)*pressurebyenergy-pressurebyvolume)
+(   55)         soundspeed(j,k,l)=SQRT(sound_speed_squared)
+(   56)       ENDDO
+(   57)     ENDDO
+(   58)   ENDDO
+(   59) !$OMP END DO
+(   60) !$OMP END PARALLEL
+(   61) 
+(   62) END SUBROUTINE ideal_gas_kernel
+(   63) 
+(   64) END MODULE ideal_gas_kernel_module

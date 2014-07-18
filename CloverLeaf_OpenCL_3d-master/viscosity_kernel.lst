@@ -1,0 +1,148 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:27      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: viscosity_kernel.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Fortran viscosity kernel.
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Calculates an artificial viscosity using the Wilkin's method to
+(   21) !>  smooth out shock front and prevent oscillations around discontinuities.
+(   22) !>  Only cells in compression will have a non-zero value.
+(   23) 
+(   24) ! NOTES
+(   25) ! The gradients needs checking for 3d
+(   26) ! Strain needs checking
+(   27) 
+(   28) MODULE viscosity_kernel_module
+(   29) 
+(   30) CONTAINS
+(   31) 
+(   32) SUBROUTINE viscosity_kernel(x_min,x_max,y_min,y_max,z_min,z_max,    &
+(   33)                             xarea,yarea,zarea,                      &
+(   34)                             celldx,celldy,celldz,                   &
+(   35)                             density0,                               &
+(   36)                             pressure,                               &
+(   37)                             viscosity,                              &
+(   38)                             xvel0,                                  &
+(   39)                             yvel0,                                  &
+(   40)                             zvel0                                   )
+(   41) 
+(   42)   IMPLICIT NONE
+(   43) 
+(   44)   INTEGER     :: x_min,x_max,y_min,y_max,z_min,z_max
+(   45)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+2 ,z_min-2:z_max+2)    :: xarea
+(   46)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+3 ,z_min-2:z_max+2)    :: yarea
+(   47)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2 ,z_min-2:z_max+3)    :: zarea
+(   48)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2)                                     :: celldx
+(   49)   REAL(KIND=8), DIMENSION(y_min-2:y_max+2)                                     :: celldy
+(   50)   REAL(KIND=8), DIMENSION(z_min-2:z_max+2)                                     :: celldz
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:27      page 2
+
+(   51)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2)     :: density0
+(   52)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2)     :: pressure
+(   53)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2)     :: viscosity
+(   54)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3)     :: xvel0,yvel0,zvel0
+(   55) 
+(   56)   INTEGER       :: j,k,l
+(   57)   REAL(KIND=8)  :: ugrad,vgrad,wgrad,grad2,pgradx,pgrady,pgradz,pgradx2,pgrady2,pgradz2,grad     &
+(   58)                   ,ygrad,pgrad,xgrad,zgrad,div,strain2,limiter
+(   59) 
+(   60) !$OMP PARALLEL
+(   61) 
+(   62) !$OMP DO PRIVATE(ugrad,vgrad,wgrad,div,strain2,pgradx,pgrady,pgradz,pgradx2,pgrady2,pgradz2,limiter,pgrad,xgrad,ygrad,zgrad,grad,grad2)
+(   63)   DO l=z_min,z_max
+(   64)     DO k=y_min,y_max
+(   65)       DO j=x_min,x_max
+(   66)         ugrad=0.5_8*((xvel0(j+1,k  ,l  )+xvel0(j+1,k+1,l  )+xvel0(j+1,k  ,l+1)+xvel0(j+1,k+1,l+1)) &
+(   67)                     -(xvel0(j  ,k  ,l  )+xvel0(j  ,k+1,l  )+xvel0(j  ,k  ,l+1)+xvel0(j  ,k+1,l+1)))
+(   68) 
+(   69)         vgrad=0.5_8*((yvel0(j  ,k+1,l  )+yvel0(j+1,k+1,l  )+yvel0(j  ,k+1,l+1)+yvel0(j+1,k+1,l+1)) &
+(   70)                     -(yvel0(j  ,k  ,l  )+yvel0(j+1,k  ,l  )+yvel0(j  ,k  ,l+1)+yvel0(j+1,k  ,l+1)))
+(   71) 
+(   72)         wgrad=0.5_8*((zvel0(j  ,k  ,l+1)+zvel0(j+1,k+1,l+1)+zvel0(j  ,k  ,l+1)+zvel0(j+1,k+1,l+1)) &
+(   73)                     -(zvel0(j  ,k  ,l  )+zvel0(j+1,k  ,l  )+zvel0(j  ,k+1,l  )+zvel0(j+1,k+1,l  )))
+(   74) 
+(   75)         div = (xarea(j,k,l)*(ugrad)+  yarea(j,k,l)*(vgrad))+ zarea(j,k,l)*(wgrad)
+(   76) 
+(   77)         strain2 = 0.5_8*(xvel0(j,  k+1,l  ) + xvel0(j+1,k+1,l+1)-xvel0(j  ,k  ,l)-xvel0(j+1,k  ,l  ))/xarea(j,k,l) &
+(   78)                 + 0.5_8*(yvel0(j+1,k  ,l  ) + yvel0(j+1,k+1,l+1)-yvel0(j  ,k  ,l)-yvel0(j  ,k+1,l  ))/yarea(j,k,l) &
+(   79)                 + 0.5_8*(zvel0(j  ,k  ,l+1) + zvel0(j+1,k+1,l+1)-zvel0(j  ,k  ,l)-zvel0(j  ,k  ,l+1))/zarea(j,k,l)
+(   80) 
+(   81)         pgradx=(pressure(j+1,k,l)-pressure(j-1,k,l))/(celldx(j)+celldx(j+1))
+(   82)         pgrady=(pressure(j,k+1,l)-pressure(j,k-1,l))/(celldy(k)+celldy(k+1))
+(   83)         pgradz=(pressure(j,k,l+1)-pressure(j,k,l-1))/(celldz(l)+celldz(l+1))
+(   84) 
+(   85)         pgradx2 = pgradx*pgradx
+(   86)         pgrady2 = pgrady*pgrady
+(   87)         pgradz2 = pgradz*pgradz
+(   88) 
+(   89)         limiter = ((0.5_8*(ugrad)/celldx(j))*pgradx2+(0.5_8*(vgrad)/celldy(k))*pgrady2 &
+(   90)                 +(0.5_8*(wgrad)/celldz(l))*pgradz2+strain2*pgradx*pgrady*pgradz)  &
+(   91)                 /MAX(pgradx2+pgrady2+pgradz2,1.0e-16_8)
+(   92) 
+(   93)         IF ((limiter.GT.0.0).OR.(div.GE.0.0))THEN
+(   94)           viscosity(j,k,l) = 0.0
+(   95)         ELSE
+(   96)           pgradx = SIGN(MAX(1.0e-16_8,ABS(pgradx)),pgradx)
+(   97)           pgrady = SIGN(MAX(1.0e-16_8,ABS(pgrady)),pgrady)
+(   98)           pgradz = SIGN(MAX(1.0e-16_8,ABS(pgradz)),pgradz)
+(   99)           pgrad = SQRT(pgradx*pgradx+pgrady*pgrady+pgradz*pgradz)
+(  100)           xgrad = ABS(celldx(j)*pgrad/pgradx)
+(  101)           ygrad = ABS(celldy(k)*pgrad/pgrady)
+(  102)           zgrad = ABS(celldz(l)*pgrad/pgradz)
+(  103)           grad  = MIN(xgrad,ygrad,zgrad)
+(  104)           grad2 = grad*grad
+(  105) 
+(  106)           viscosity(j,k,l)=2.0_8*density0(j,k,l)*grad2*limiter*limiter
+(  107)         ENDIF
+(  108) 
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:27      page 3
+
+(  109)       ENDDO
+(  110)     ENDDO
+(  111)   ENDDO
+(  112) !$OMP END DO
+(  113) 
+(  114) !$OMP END PARALLEL
+(  115) 
+(  116) END SUBROUTINE viscosity_kernel
+(  117) 
+(  118) END MODULE viscosity_kernel_module

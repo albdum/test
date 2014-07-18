@@ -1,0 +1,211 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: start.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Main set up routine
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invokes the mesh decomposer and sets up chunk connectivity. It then
+(   21) !>  allocates the communication buffers and call the chunk initialisation and
+(   22) !>  generation routines. It calls the equation of state to calculate initial
+(   23) !>  pressure before priming the halo cells and writing an initial field summary.
+(   24) 
+(   25) SUBROUTINE start
+(   26) 
+(   27)   USE clover_module
+(   28)   USE parse_module
+(   29)   USE update_halo_module
+(   30)   USE ideal_gas_module
+(   31)   USE build_field_module
+(   32) 
+(   33)   IMPLICIT NONE
+(   34) 
+(   35)   INTEGER :: c
+(   36) 
+(   37)   INTEGER :: x_cells,y_cells,z_cells
+(   38)   INTEGER, ALLOCATABLE :: right(:),left(:),top(:),bottom(:),back(:),front(:)
+(   39) 
+(   40)   INTEGER :: fields(NUM_FIELDS) !, chunk_task_responsible_for 
+(   41) 
+(   42)   LOGICAL :: profiler_off
+(   43) 
+(   44)   IF(parallel%boss)THEN
+(   45)      WRITE(g_out,*) 'Setting up initial geometry'
+(   46)      WRITE(g_out,*)
+(   47)   ENDIF
+(   48) 
+(   49)   time  = 0.0
+(   50)   step  = 0
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 2
+
+(   51)   dtold = dtinit
+(   52)   dt    = dtinit
+(   53) 
+(   54)   CALL clover_barrier
+(   55) 
+(   56)   CALL clover_get_num_chunks(number_of_chunks)
+(   57) 
+(   58)   ALLOCATE(chunks(1:chunks_per_task))
+(   59) 
+(   60)   ALLOCATE(left(1:chunks_per_task))
+(   61)   ALLOCATE(right(1:chunks_per_task))
+(   62)   ALLOCATE(bottom(1:chunks_per_task))
+(   63)   ALLOCATE(top(1:chunks_per_task))
+(   64)   ALLOCATE(back(1:chunks_per_task))
+(   65)   ALLOCATE(front(1:chunks_per_task))
+(   66) 
+(   67)   CALL clover_decompose(grid%x_cells,grid%y_cells,grid%z_cells,left,right,bottom,top,back,front)
+(   68) 
+(   69)   DO c=1,chunks_per_task
+(   70)       
+(   71)     ! Needs changing so there can be more than 1 chunk per task
+(   72)     chunks(c)%task = parallel%task
+(   73) 
+(   74)     !chunk_task_responsible_for = parallel%task+1
+(   75) 
+(   76)     x_cells = right(c) -left(c)  +1
+(   77)     y_cells = top(c)   -bottom(c)+1
+(   78)     z_cells = front(c) -back(c)  +1
+(   79)       
+(   80)     IF(chunks(c)%task.EQ.parallel%task)THEN
+(   81)       CALL build_field(c,x_cells,y_cells,z_cells)
+(   82)     ENDIF
+(   83)     chunks(c)%field%left    = left(c)
+(   84)     chunks(c)%field%bottom  = bottom(c)
+(   85)     chunks(c)%field%right   = right(c)
+(   86)     chunks(c)%field%top     = top(c)
+(   87)     chunks(c)%field%back    = back(c)
+(   88)     chunks(c)%field%front   = front(c)
+(   89)     chunks(c)%field%left_boundary   = 1
+(   90)     chunks(c)%field%bottom_boundary = 1
+(   91)     chunks(c)%field%back_boundary   = 1
+(   92)     chunks(c)%field%right_boundary  = grid%x_cells
+(   93)     chunks(c)%field%top_boundary    = grid%y_cells
+(   94)     chunks(c)%field%front_boundary  = grid%z_cells
+(   95)     chunks(c)%field%x_min = 1
+(   96)     chunks(c)%field%y_min = 1
+(   97)     chunks(c)%field%z_min = 1
+(   98)     chunks(c)%field%x_max = right(c)-left(c)+1
+(   99)     chunks(c)%field%y_max = top(c)-bottom(c)+1
+(  100)     chunks(c)%field%z_max = front(c)-back(c)+1
+(  101) 
+(  102)   ENDDO
+(  103) 
+(  104)   DEALLOCATE(left,right,bottom,top,back,front)
+(  105) 
+(  106)   CALL clover_barrier
+(  107) 
+(  108)   DO c=1,chunks_per_task
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 3
+
+(  109)     IF(chunks(c)%task.EQ.parallel%task)THEN
+(  110)       CALL clover_allocate_buffers(c)
+(  111)     ENDIF
+(  112)   ENDDO
+(  113) 
+(  114)   DO c=1,chunks_per_task
+(  115)     IF(chunks(c)%task.EQ.parallel%task)THEN
+(  116)       CALL initialise_chunk(c)
+(  117)     ENDIF
+(  118)   ENDDO
+(  119) 
+(  120)   IF(parallel%boss)THEN
+(  121)      WRITE(g_out,*) 'Generating chunks'
+(  122)   ENDIF
+(  123) 
+(  124)   DO c=1,chunks_per_task
+(  125)     IF(chunks(c)%task.EQ.parallel%task)THEN
+(  126)       CALL generate_chunk(c)
+(  127)     ENDIF
+(  128)   ENDDO
+(  129) 
+(  130)   advect_x=.TRUE.
+(  131) 
+(  132)   CALL clover_barrier
+(  133) 
+(  134)   ! Do no profile the start up costs otherwise the total times will not add up
+(  135)   ! at the end
+(  136)   profiler_off=profiler_on
+(  137)   profiler_on=.FALSE.
+(  138) 
+(  139)   DO c = 1, chunks_per_task
+(  140)     CALL ideal_gas(c,.FALSE.)
+(  141)   END DO
+(  142) 
+(  143)   ! Prime all halo data for the first step
+(  144)   fields=0
+(  145)   fields(FIELD_DENSITY0)=1
+(  146)   fields(FIELD_ENERGY0)=1
+(  147)   fields(FIELD_PRESSURE)=1
+(  148)   fields(FIELD_VISCOSITY)=1
+(  149)   fields(FIELD_DENSITY1)=1
+(  150)   fields(FIELD_ENERGY1)=1
+(  151)   fields(FIELD_XVEL0)=1
+(  152)   fields(FIELD_YVEL0)=1
+(  153)   fields(FIELD_ZVEL0)=1
+(  154)   fields(FIELD_XVEL1)=1
+(  155)   fields(FIELD_YVEL1)=1
+(  156)   fields(FIELD_ZVEL1)=1
+(  157) 
+(  158)   CALL update_halo(fields,2)
+(  159) 
+(  160)   IF(parallel%boss)THEN
+(  161)      WRITE(g_out,*)
+(  162)      WRITE(g_out,*) 'Problem initialised and generated'
+(  163)   ENDIF
+(  164) 
+(  165)   CALL field_summary()
+(  166) 
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 4
+
+(  167)   IF(visit_frequency.NE.0) CALL visit()
+(  168) 
+(  169)   CALL clover_barrier
+(  170) 
+(  171)   profiler_on=profiler_off
+(  172) 
+(  173) END SUBROUTINE start

@@ -1,0 +1,353 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:16      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: read_input.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Reads the user input
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Reads and parses the user input from the processed file and sets
+(   21) !>  the variables used in the generation phase. Default values are also set
+(   22) !>  here.
+(   23) 
+(   24) SUBROUTINE read_input()
+(   25) 
+(   26)   USE clover_module
+(   27)   USE parse_module
+(   28)   USE report_module
+(   29) 
+(   30)   IMPLICIT NONE
+(   31) 
+(   32)   INTEGER            :: state,stat,state_max,n
+(   33) 
+(   34)   REAL(KIND=8) :: dx,dy,dz
+(   35) 
+(   36)   CHARACTER(LEN=500) :: word
+(   37) 
+(   38)   test_problem=0
+(   39) 
+(   40)   state_max=0
+(   41) 
+(   42)   grid%xmin=  0.0_8
+(   43)   grid%ymin=  0.0_8
+(   44)   grid%zmin=  0.0_8
+(   45)   grid%xmax=100.0_8
+(   46)   grid%ymax=100.0_8
+(   47)   grid%zmax=100.0_8
+(   48) 
+(   49)   grid%x_cells=10
+(   50)   grid%y_cells=10
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:16      page 2
+
+(   51)   grid%z_cells=10
+(   52) 
+(   53)   end_time=10.0_8
+(   54)   end_step=g_ibig
+(   55)   complete=.FALSE.
+(   56) 
+(   57)   visit_frequency=0
+(   58)   summary_frequency=10
+(   59) 
+(   60)   dtinit=0.1_8
+(   61)   dtmax=1.0_8
+(   62)   dtmin=0.0000001_8
+(   63)   dtrise=1.5_8
+(   64)   dtc_safe=0.7_8
+(   65)   dtu_safe=0.5_8
+(   66)   dtv_safe=0.5_8
+(   67)   dtw_safe=0.5_8
+(   68)   dtdiv_safe=0.7_8
+(   69) 
+(   70)   use_fortran_kernels=.TRUE.
+(   71)   use_C_kernels=.FALSE.
+(   72)   use_OA_kernels=.FALSE.
+(   73)   profiler_on=.FALSE.
+(   74)   profiler%timestep=0.0
+(   75)   profiler%acceleration=0.0
+(   76)   profiler%PdV=0.0
+(   77)   profiler%cell_advection=0.0
+(   78)   profiler%mom_advection=0.0
+(   79)   profiler%viscosity=0.0
+(   80)   profiler%ideal_gas=0.0
+(   81)   profiler%visit=0.0
+(   82)   profiler%summary=0.0
+(   83)   profiler%reset=0.0
+(   84)   profiler%revert=0.0
+(   85)   profiler%flux=0.0
+(   86)   profiler%halo_exchange=0.0
+(   87) 
+(   88)   IF(parallel%boss)WRITE(g_out,*) 'Reading input file'
+(   89)   IF(parallel%boss)WRITE(g_out,*)
+(   90) 
+(   91)   stat=parse_init(g_in,'*clover')
+(   92) 
+(   93)   DO
+(   94)     stat=parse_getline(dummy)
+(   95)     IF (stat.ne.0) exit
+(   96)     DO
+(   97)       word=parse_getword(.FALSE.)
+(   98)       IF(word.EQ.'')EXIT
+(   99)       IF (word.EQ.'state') THEN
+(  100)         state_max=MAX(state_max,parse_getival(parse_getword(.TRUE.)))
+(  101)         EXIT
+(  102)       ENDIF
+(  103)     ENDDO
+(  104)   ENDDO
+(  105) 
+(  106)   number_of_states=state_max
+(  107) 
+(  108)   IF(number_of_states.LT.1) CALL report_error('read_input','No states defined.')
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:16      page 3
+
+(  109) 
+(  110)   stat=parse_init(g_in,'*clover')
+(  111) 
+(  112)   ALLOCATE(states(number_of_states))
+(  113)   states(:)%defined=.FALSE.
+(  114)   states(:)%energy=0.0
+(  115)   states(:)%density=0.0
+(  116)   states(:)%xvel=0.0
+(  117)   states(:)%yvel=0.0
+(  118)   states(:)%zvel=0.0
+(  119) 
+(  120)   DO
+(  121)     stat=parse_getline(dummy)
+(  122) 
+(  123)     IF(stat.NE.0)EXIT
+(  124) 
+(  125)     DO
+(  126)       word=parse_getword(.FALSE.)
+(  127) 
+(  128)       IF(word.EQ.'')EXIT
+(  129)       SELECT CASE(word)
+(  130)       CASE('initial_timestep')
+(  131)         dtinit=parse_getrval(parse_getword(.TRUE.))
+(  132)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'initial_timestep ',dtinit
+(  133)       CASE('max_timestep')
+(  134)         dtmax=parse_getrval(parse_getword(.TRUE.))
+(  135)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'max_timestep',dtinit
+(  136)       CASE('timestep_rise')
+(  137)         dtrise=parse_getrval(parse_getword(.TRUE.))
+(  138)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'timestep_rise',dtrise
+(  139)       CASE('end_time')
+(  140)         end_time=parse_getrval(parse_getword(.TRUE.))
+(  141)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'end_time',end_time
+(  142)       CASE('end_step')
+(  143)         end_step=parse_getival(parse_getword(.TRUE.))
+(  144)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'end_step',end_step
+(  145)       CASE('xmin')
+(  146)         grid%xmin=parse_getrval(parse_getword(.TRUE.))
+(  147)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'xmin',grid%xmin
+(  148)       CASE('xmax')
+(  149)         grid%xmax=parse_getrval(parse_getword(.TRUE.))
+(  150)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'xmax',grid%xmax
+(  151)       CASE('ymin')
+(  152)         grid%ymin=parse_getrval(parse_getword(.TRUE.))
+(  153)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'ymin',grid%ymin
+(  154)       CASE('ymax')
+(  155)         grid%ymax=parse_getrval(parse_getword(.TRUE.))
+(  156)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'ymax',grid%ymax
+(  157)       CASE('zmin')
+(  158)         grid%zmin=parse_getrval(parse_getword(.TRUE.))
+(  159)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'zmin',grid%zmin
+(  160)       CASE('zmax')
+(  161)         grid%zmax=parse_getrval(parse_getword(.TRUE.))
+(  162)         IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'zmax',grid%zmax
+(  163)       CASE('x_cells')
+(  164)         grid%x_cells=parse_getival(parse_getword(.TRUE.))
+(  165)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'x_cells',grid%x_cells
+(  166)       CASE('y_cells')
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:16      page 4
+
+(  167)         grid%y_cells=parse_getival(parse_getword(.TRUE.))
+(  168)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'y_cells',grid%y_cells
+(  169)       CASE('z_cells')
+(  170)         grid%z_cells=parse_getival(parse_getword(.TRUE.))
+(  171)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'z_cells',grid%z_cells
+(  172)       CASE('visit_frequency')
+(  173)         visit_frequency=parse_getival(parse_getword(.TRUE.))
+(  174)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'visit_frequency',visit_frequency
+(  175)       CASE('summary_frequency')
+(  176)         summary_frequency=parse_getival(parse_getword(.TRUE.))
+(  177)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'summary_frequency',summary_frequency
+(  178)       CASE('use_fortran_kernels')
+(  179)         use_fortran_kernels=.TRUE.
+(  180)         use_C_kernels=.FALSE.
+(  181)         use_OA_kernels=.FALSE.
+(  182)       CASE('use_c_kernels')
+(  183)         use_fortran_kernels=.FALSE.
+(  184)         use_C_kernels=.TRUE.
+(  185)         use_OA_kernels=.FALSE.
+(  186)       CASE('use_oa_kernels')
+(  187)         use_fortran_kernels=.FALSE.
+(  188)         use_C_kernels=.FALSE.
+(  189)         use_OA_kernels=.TRUE.
+(  190)       CASE('profiler_on')
+(  191)         profiler_on=.TRUE.
+(  192)         IF(parallel%boss)WRITE(g_out,"(1x,a25)")'Profiler on'
+(  193)       CASE('test_problem')
+(  194)         test_problem=parse_getival(parse_getword(.TRUE.))
+(  195)         IF(parallel%boss)WRITE(g_out,"(1x,a25,i12)")'test_problem',test_problem
+(  196)       CASE('state')
+(  197) 
+(  198)         state=parse_getival(parse_getword(.TRUE.))
+(  199) 
+(  200)         IF(parallel%boss)WRITE(g_out,*)'Reading specification for state ',state
+(  201)         IF (states(state)%defined) CALL report_error('read_input','State defined twice.')
+(  202)         IF(parallel%boss) WRITE(g_out,*)
+(  203) 
+(  204)         states(state)%defined=.TRUE.
+(  205)         DO
+(  206)           word=parse_getword(.FALSE.)
+(  207)           IF(word.EQ.'') EXIT
+(  208) 
+(  209)           SELECT CASE(word)
+(  210) 
+(  211)           CASE('xvel')
+(  212)             states(state)%xvel=parse_getrval(parse_getword(.TRUE.))
+(  213)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'xvel ',states(state)%xvel
+(  214)           CASE('yvel')
+(  215)             states(state)%yvel=parse_getrval(parse_getword(.TRUE.))
+(  216)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'yvel ',states(state)%yvel
+(  217)           CASE('zvel')
+(  218)             states(state)%zvel=parse_getrval(parse_getword(.TRUE.))
+(  219)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'zvel ',states(state)%zvel
+(  220)           CASE('xmin')
+(  221)             states(state)%xmin=parse_getrval(parse_getword(.TRUE.))
+(  222)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state xmin ',states(state)%xmin
+(  223)           CASE('ymin')
+(  224)             states(state)%ymin=parse_getrval(parse_getword(.TRUE.))
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:16      page 5
+
+(  225)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state ymin ',states(state)%ymin
+(  226)           CASE('zmin')
+(  227)             states(state)%zmin=parse_getrval(parse_getword(.TRUE.))
+(  228)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state zmin ',states(state)%zmin
+(  229)           CASE('xmax')
+(  230)             states(state)%xmax=parse_getrval(parse_getword(.TRUE.))
+(  231)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state xmax ',states(state)%xmax
+(  232)           CASE('ymax')
+(  233)             states(state)%ymax=parse_getrval(parse_getword(.TRUE.))
+(  234)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state ymax ',states(state)%ymax
+(  235)           CASE('zmax')
+(  236)             states(state)%zmax=parse_getrval(parse_getword(.TRUE.))
+(  237)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state zmax ',states(state)%zmax
+(  238)           CASE('radius')
+(  239)             states(state)%radius=parse_getrval(parse_getword(.TRUE.))
+(  240)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state radius ',states(state)%radius
+(  241)           CASE('density')
+(  242)             states(state)%density=parse_getrval(parse_getword(.TRUE.))
+(  243)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state density ',states(state)%density
+(  244)           CASE('energy')
+(  245)             states(state)%energy=parse_getrval(parse_getword(.TRUE.))
+(  246)             IF(parallel%boss)WRITE(g_out,"(1x,a25,e12.4)")'state energy ',states(state)%energy
+(  247)           CASE('geometry')
+(  248)             word=TRIM(parse_getword(.TRUE.))
+(  249)             SELECT CASE(word)
+(  250)             CASE("cuboid")
+(  251)               states(state)%geometry=g_rect
+(  252)               IF(parallel%boss)WRITE(g_out,"(1x,a26)")'state geometry cuboid'
+(  253)             CASE("sphere")
+(  254)               states(state)%geometry=g_circ
+(  255)               IF(parallel%boss)WRITE(g_out,"(1x,a25)")'state geometry sphere'
+(  256)             CASE("point")
+(  257)               states(state)%geometry=g_point
+(  258)               IF(parallel%boss)WRITE(g_out,"(1x,a25)")'state geometry point'
+(  259)             END SELECT
+(  260)           END SELECT
+(  261)         ENDDO
+(  262)         IF(parallel%boss) WRITE(g_out,*)
+(  263)       END SELECT
+(  264)     ENDDO
+(  265)   ENDDO
+(  266) 
+(  267)   IF(parallel%boss) THEN
+(  268)     WRITE(g_out,*)
+(  269)     IF(use_fortran_kernels) THEN
+(  270)       WRITE(g_out,"(1x,a25)")'Using Fortran Kernels'
+(  271)     ELSEIF(use_c_kernels) THEN
+(  272)       WRITE(g_out,"(1x,a25)")'Using C Kernels'
+(  273)     ELSEIF(use_oa_kernels) THEN
+(  274)       WRITE(g_out,"(1x,a25)")'Using OpenAcc Kernels'
+(  275)     ENDIF
+(  276)     WRITE(g_out,*)
+(  277)     WRITE(g_out,*) 'Input read finished.'
+(  278)     WRITE(g_out,*)
+(  279)   ENDIF
+(  280) 
+(  281)   ! If a state boundary falls exactly on a cell boundary then round off can
+(  282)   ! cause the state to be put one cell further that expected. This is compiler
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:16      page 6
+
+(  283)   ! /system dependent. To avoid this, a state boundary is reduced/increased by a 100th
+(  284)   ! of a cell width so it lies well with in the intended cell.
+(  285)   ! Because a cell is either full or empty of a specified state, this small
+(  286)   ! modification to the state extents does not change the answers.
+(  287)   dx=(grid%xmax-grid%xmin)/float(grid%x_cells)
+(  288)   dy=(grid%ymax-grid%ymin)/float(grid%y_cells)
+(  289)   dz=(grid%zmax-grid%zmin)/float(grid%z_cells)
+(  290)   DO n=2,number_of_states
+(  291)     states(n)%xmin=states(n)%xmin+(dx/100.0_8)
+(  292)     states(n)%ymin=states(n)%ymin+(dy/100.0_8)
+(  293)     states(n)%zmin=states(n)%zmin+(dz/100.0_8)
+(  294)     states(n)%xmax=states(n)%xmax-(dx/100.0_8)
+(  295)     states(n)%ymax=states(n)%ymax-(dy/100.0_8)
+(  296)     states(n)%zmax=states(n)%zmax-(dz/100.0_8)
+(  297)   ENDDO
+(  298) 
+(  299) END SUBROUTINE read_input

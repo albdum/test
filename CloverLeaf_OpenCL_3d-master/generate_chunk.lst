@@ -1,0 +1,168 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: generate_chunk.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Mesh chunk generation driver
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Invoked the users specified chunk generator.
+(   21) 
+(   22) SUBROUTINE generate_chunk(chunk)
+(   23) 
+(   24)   USE clover_module
+(   25)   USE generate_chunk_kernel_module
+(   26) 
+(   27)   IMPLICIT NONE
+(   28) 
+(   29)   INTEGER         :: chunk
+(   30) 
+(   31)   INTEGER         :: state
+(   32)   REAL(KIND=8), DIMENSION(number_of_states) :: state_density,state_energy,state_xvel,state_yvel,state_zvel
+(   33)   REAL(KIND=8), DIMENSION(number_of_states) :: state_xmin,state_xmax,state_ymin,state_ymax,state_zmin,state_zmax,state_radius
+(   34)   INTEGER,      DIMENSION(number_of_states) :: state_geometry
+(   35) 
+(   36)   DO state=1,number_of_states 
+(   37)    state_density(state)=states(state)%density
+(   38)    state_energy(state)=states(state)%energy
+(   39)    state_xvel(state)=states(state)%xvel
+(   40)    state_yvel(state)=states(state)%yvel
+(   41)    state_zvel(state)=states(state)%zvel
+(   42)    state_xmin(state)=states(state)%xmin
+(   43)    state_xmax(state)=states(state)%xmax
+(   44)    state_ymin(state)=states(state)%ymin
+(   45)    state_ymax(state)=states(state)%ymax
+(   46)    state_zmin(state)=states(state)%zmin
+(   47)    state_zmax(state)=states(state)%zmax
+(   48)    state_radius(state)=states(state)%radius
+(   49)    state_geometry(state)=states(state)%geometry
+(   50)   ENDDO
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 2
+
+(   51) 
+(   52)   IF(use_fortran_kernels) THEN
+(   53)     CALL generate_chunk_kernel(chunks(chunk)%field%x_min,             &
+(   54)                                chunks(chunk)%field%x_max,             &
+(   55)                                chunks(chunk)%field%y_min,             &
+(   56)                                chunks(chunk)%field%y_max,             &
+(   57)                                chunks(chunk)%field%z_min,             &
+(   58)                                chunks(chunk)%field%z_max,             &
+(   59)                                chunks(chunk)%field%vertexx,           &
+(   60)                                chunks(chunk)%field%vertexy,           &
+(   61)                                chunks(chunk)%field%vertexz,           &
+(   62)                                chunks(chunk)%field%cellx,             &
+(   63)                                chunks(chunk)%field%celly,             &
+(   64)                                chunks(chunk)%field%cellz,             &
+(   65)                                chunks(chunk)%field%density0,          &
+(   66)                                chunks(chunk)%field%energy0,           &
+(   67)                                chunks(chunk)%field%xvel0,             &
+(   68)                                chunks(chunk)%field%yvel0,             &
+(   69)                                chunks(chunk)%field%zvel0,             &
+(   70)                                number_of_states,                      &
+(   71)                                state_density,                         &
+(   72)                                state_energy,                          &
+(   73)                                state_xvel,                            &
+(   74)                                state_yvel,                            &
+(   75)                                state_zvel,                            &
+(   76)                                state_xmin,                            &
+(   77)                                state_xmax,                            &
+(   78)                                state_ymin,                            &
+(   79)                                state_ymax,                            &
+(   80)                                state_zmin,                            &
+(   81)                                state_zmax,                            &
+(   82)                                state_radius,                          &
+(   83)                                state_geometry,                        &
+(   84)                                g_rect,                                &
+(   85)                                g_circ,                                &
+(   86)                                g_point)
+(   87)       ELSEIF(use_opencl_kernels)THEN
+(   88) 	CALL generate_chunk_kernel_ocl(number_of_states, &
+(   89)                                        state_density, &
+(   90)                                        state_energy, &
+(   91)                                        state_xvel, &
+(   92)                                        state_yvel, &
+(   93)                                        state_zvel, &
+(   94)                                        state_xmin, &
+(   95)                                        state_xmax, &
+(   96)                                        state_ymin, &
+(   97)                                        state_ymax, &
+(   98)                                        state_zmin, &
+(   99)                                        state_zmax, &
+(  100)                                        state_radius, &
+(  101)                                        state_geometry, &
+(  102)                                        g_rect, &
+(  103)                                        g_circ, &
+(  104)                                        g_point)
+(  105)       ELSEIF(use_C_kernels)THEN
+(  106)         CALL generate_chunk_kernel_c(chunks(chunk)%field%x_min,         &
+(  107)                                  chunks(chunk)%field%x_max,             &
+(  108)                                  chunks(chunk)%field%y_min,             &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 3
+
+(  109)                                  chunks(chunk)%field%y_max,             &
+(  110)                                  chunks(chunk)%field%vertexx,           &
+(  111)                                  chunks(chunk)%field%vertexy,           &
+(  112)                                  chunks(chunk)%field%cellx,             &
+(  113)                                  chunks(chunk)%field%celly,             &
+(  114)                                  chunks(chunk)%field%density0,          &
+(  115)                                  chunks(chunk)%field%energy0,           &
+(  116)                                  chunks(chunk)%field%xvel0,             &
+(  117)                                  chunks(chunk)%field%yvel0,             &
+(  118)                                  chunks(chunk)%field%zvel0,             &
+(  119)                                  number_of_states,                      &
+(  120)                                  state_density,                         &
+(  121)                                  state_energy,                          &
+(  122)                                  state_xvel,                            &
+(  123)                                  state_yvel,                            &
+(  124)                                  state_zvel,                            &
+(  125)                                  state_xmin,                            &
+(  126)                                  state_xmax,                            &
+(  127)                                  state_ymin,                            &
+(  128)                                  state_ymax,                            &
+(  129)                                  state_zmin,                            &
+(  130)                                  state_zmax,                            &
+(  131)                                  state_radius,                          &
+(  132)                                  state_geometry,                        &
+(  133)                                  g_rect,                                &
+(  134)                                  g_circ,                                &
+(  135)                                  g_point)
+(  136)       ENDIF
+(  137) 
+(  138) END SUBROUTINE generate_chunk

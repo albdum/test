@@ -1,0 +1,251 @@
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 1
+
+Switches: -noasm -nodclchk -debug -nodlines -line -list
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+          -inform severe -opt 2 -nosave -object -noonetrip
+          -depchk on -nostandard     
+          -symbol -noupcase    
+
+Filename: generate_chunk_kernel.f90
+
+(    1) !Crown Copyright 2012 AWE.
+(    2) !
+(    3) ! This file is part of CloverLeaf.
+(    4) !
+(    5) ! CloverLeaf is free software: you can redistribute it and/or modify it under 
+(    6) ! the terms of the GNU General Public License as published by the 
+(    7) ! Free Software Foundation, either version 3 of the License, or (at your option) 
+(    8) ! any later version.
+(    9) !
+(   10) ! CloverLeaf is distributed in the hope that it will be useful, but 
+(   11) ! WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+(   12) ! FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+(   13) ! details.
+(   14) !
+(   15) ! You should have received a copy of the GNU General Public License along with 
+(   16) ! CloverLeaf. If not, see http://www.gnu.org/licenses/.
+(   17) 
+(   18) !>  @brief Fortran mesh chunk generator
+(   19) !>  @author Wayne Gaudin
+(   20) !>  @details Generates the field data on a mesh chunk based on the user specified
+(   21) !>  input for the states.
+(   22) !>
+(   23) !>  Note that state one is always used as the background state, which is then
+(   24) !>  overwritten by further state definitions.
+(   25) 
+(   26) MODULE generate_chunk_kernel_module
+(   27) 
+(   28) CONTAINS
+(   29) 
+(   30) SUBROUTINE generate_chunk_kernel(x_min,x_max,y_min,y_max,z_min,z_max, &
+(   31)                                  vertexx,                 &
+(   32)                                  vertexy,                 &
+(   33)                                  vertexz,                 &
+(   34)                                  cellx,                   &
+(   35)                                  celly,                   &
+(   36)                                  cellz,                   &
+(   37)                                  density0,                &
+(   38)                                  energy0,                 &
+(   39)                                  xvel0,                   &
+(   40)                                  yvel0,                   &
+(   41)                                  zvel0,                   &
+(   42)                                  number_of_states,        &
+(   43)                                  state_density,           &
+(   44)                                  state_energy,            &
+(   45)                                  state_xvel,              &
+(   46)                                  state_yvel,              &
+(   47)                                  state_zvel,              &
+(   48)                                  state_xmin,              &
+(   49)                                  state_xmax,              &
+(   50)                                  state_ymin,              &
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 2
+
+(   51)                                  state_ymax,              &
+(   52)                                  state_zmin,              &
+(   53)                                  state_zmax,              &
+(   54)                                  state_radius,            &
+(   55)                                  state_geometry,          &
+(   56)                                  g_rect,                  &
+(   57)                                  g_circ,                  &
+(   58)                                  g_point)
+(   59) 
+(   60)   IMPLICIT NONE
+(   61) 
+(   62)   INTEGER      :: x_min,x_max,y_min,y_max,z_min,z_max
+(   63)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3) :: vertexx
+(   64)   REAL(KIND=8), DIMENSION(y_min-2:y_max+3) :: vertexy
+(   65)   REAL(KIND=8), DIMENSION(z_min-2:z_max+3) :: vertexz
+(   66)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2) :: cellx
+(   67)   REAL(KIND=8), DIMENSION(y_min-2:y_max+2) :: celly
+(   68)   REAL(KIND=8), DIMENSION(z_min-2:z_max+2) :: cellz
+(   69)   REAL(KIND=8), DIMENSION(x_min-2:x_max+2,y_min-2:y_max+2,z_min-2:z_max+2) :: density0,energy0
+(   70)   REAL(KIND=8), DIMENSION(x_min-2:x_max+3,y_min-2:y_max+3,z_min-2:z_max+3) :: xvel0,yvel0,zvel0
+(   71)   INTEGER      :: number_of_states
+(   72)   REAL(KIND=8), DIMENSION(number_of_states) :: state_density
+(   73)   REAL(KIND=8), DIMENSION(number_of_states) :: state_energy
+(   74)   REAL(KIND=8), DIMENSION(number_of_states) :: state_xvel
+(   75)   REAL(KIND=8), DIMENSION(number_of_states) :: state_yvel
+(   76)   REAL(KIND=8), DIMENSION(number_of_states) :: state_zvel
+(   77)   REAL(KIND=8), DIMENSION(number_of_states) :: state_xmin
+(   78)   REAL(KIND=8), DIMENSION(number_of_states) :: state_xmax
+(   79)   REAL(KIND=8), DIMENSION(number_of_states) :: state_ymin
+(   80)   REAL(KIND=8), DIMENSION(number_of_states) :: state_ymax
+(   81)   REAL(KIND=8), DIMENSION(number_of_states) :: state_zmin
+(   82)   REAL(KIND=8), DIMENSION(number_of_states) :: state_zmax
+(   83)   REAL(KIND=8), DIMENSION(number_of_states) :: state_radius
+(   84)   INTEGER     , DIMENSION(number_of_states) :: state_geometry
+(   85)   INTEGER      :: g_rect
+(   86)   INTEGER      :: g_circ
+(   87)   INTEGER      :: g_point
+(   88) 
+(   89)   REAL(KIND=8) :: radius,x_cent,y_cent,z_cent
+(   90)   INTEGER      :: state
+(   91) 
+(   92)   INTEGER      :: j,k,jt,kt,l,lt
+(   93) 
+(   94)   ! State 1 is always the background state
+(   95) 
+(   96) !$OMP PARALLEL SHARED(x_cent,y_cent)
+(   97) !$OMP DO
+(   98)   DO l=z_min-2,z_max+2
+(   99)     DO k=y_min-2,y_max+2
+(  100)       DO j=x_min-2,x_max+2
+(  101)         energy0(j,k,l)=state_energy(1)
+(  102)       ENDDO
+(  103)     ENDDO
+(  104)   ENDDO
+(  105) !$OMP END DO
+(  106) !$OMP DO
+(  107)   DO l=z_min-2,z_max+2
+(  108)     DO k=y_min-2,y_max+2
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 3
+
+(  109)       DO j=x_min-2,x_max+2
+(  110)         density0(j,k,l)=state_density(1)
+(  111)       ENDDO
+(  112)     ENDDO
+(  113)   ENDDO
+(  114) !$OMP END DO
+(  115) !$OMP DO
+(  116)   DO l=z_min-2,z_max+2
+(  117)     DO k=y_min-2,y_max+2
+(  118)       DO j=x_min-2,x_max+2
+(  119)         xvel0(j,k,l)=state_xvel(1)
+(  120)       ENDDO
+(  121)     ENDDO
+(  122)   ENDDO
+(  123) !$OMP END DO
+(  124) !$OMP DO
+(  125)   DO l=z_min-2,z_max+2
+(  126)     DO k=y_min-2,y_max+2
+(  127)       DO j=x_min-2,x_max+2
+(  128)         yvel0(j,k,l)=state_yvel(1)
+(  129)       ENDDO
+(  130)     ENDDO
+(  131)   ENDDO
+(  132) !$OMP END DO
+(  133) !$OMP DO
+(  134)   DO l=z_min-2,z_max+2
+(  135)     DO k=y_min-2,y_max+2
+(  136)       DO j=x_min-2,x_max+2
+(  137)         zvel0(j,k,l)=state_zvel(1)
+(  138)       ENDDO
+(  139)     ENDDO
+(  140)   ENDDO
+(  141) !$OMP END DO
+(  142) 
+(  143)   DO state=2,number_of_states
+(  144) 
+(  145) ! Could the velocity setting be thread unsafe?
+(  146)     x_cent=state_xmin(state)
+(  147)     y_cent=state_ymin(state)
+(  148)     z_cent=state_zmin(state)
+(  149) 
+(  150) !$OMP DO PRIVATE(radius,jt,kt,lt)
+(  151)     DO l=z_min-2,z_max+2
+(  152)       DO k=y_min-2,y_max+2
+(  153)         DO j=x_min-2,x_max+2
+(  154)           IF(state_geometry(state).EQ.g_rect ) THEN
+(  155)             IF(vertexx(j+1).GE.state_xmin(state).AND.vertexx(j).LT.state_xmax(state)) THEN
+(  156)               IF(vertexy(k+1).GE.state_ymin(state).AND.vertexy(k).LT.state_ymax(state)) THEN
+(  157)                 IF(vertexz(l+1).GE.state_zmin(state).AND.vertexz(l).LT.state_zmax(state)) THEN
+(  158)                   energy0(j,k,l)=state_energy(state)
+(  159)                   density0(j,k,l)=state_density(state)
+(  160)                   DO lt=l,l+1
+(  161)                     DO kt=k,k+1
+(  162)                       DO jt=j,j+1
+(  163)                         xvel0(jt,kt,lt)=state_xvel(state)
+(  164)                         yvel0(jt,kt,lt)=state_yvel(state)
+(  165)                         zvel0(jt,kt,lt)=state_zvel(state)
+(  166)                       ENDDO
+
+
+
+
+
+
+PGF90 (Version     13.5)          07/18/2014  14:45:25      page 4
+
+(  167)                     ENDDO
+(  168)                   ENDDO
+(  169)                 ENDIF
+(  170)               ENDIF
+(  171)             ENDIF
+(  172)           ELSEIF(state_geometry(state).EQ.g_circ ) THEN
+(  173)             radius=SQRT((cellx(j)-x_cent)*(cellx(j)-x_cent)+(celly(k)-y_cent)*(celly(k)-y_cent)+(cellz(l)-z_cent)*(cellz(l)-z_cent))
+(  174)             IF(radius.LE.state_radius(state))THEN
+(  175)               energy0(j,k,l)=state_energy(state)
+(  176)               density0(j,k,l)=state_density(state)
+(  177)               DO lt=l,l+1
+(  178)                 DO kt=k,k+1
+(  179)                   DO jt=j,j+1
+(  180)                     xvel0(jt,kt,lt)=state_xvel(state)
+(  181)                     yvel0(jt,kt,lt)=state_yvel(state)
+(  182)                     zvel0(jt,kt,lt)=state_zvel(state)
+(  183)                   ENDDO
+(  184)                 ENDDO
+(  185)               ENDDO
+(  186)             ENDIF
+(  187)           ELSEIF(state_geometry(state).EQ.g_point) THEN
+(  188)             IF(vertexx(j).EQ.x_cent .AND. vertexy(k).EQ.y_cent .AND. vertexz(l).EQ.z_cent) THEN
+(  189)               energy0(j,k,l)=state_energy(state)
+(  190)               density0(j,k,l)=state_density(state)
+(  191)               DO lt=l,l+1
+(  192)                 DO kt=k,k+1
+(  193)                   DO jt=j,j+1
+(  194)                     xvel0(jt,kt,lt)=state_xvel(state)
+(  195)                     yvel0(jt,kt,lt)=state_yvel(state)
+(  196)                     zvel0(jt,kt,lt)=state_zvel(state)
+(  197)                   ENDDO
+(  198)                 ENDDO
+(  199)               ENDDO
+(  200)             ENDIF
+(  201)           ENDIF
+(  202)         ENDDO
+(  203)       ENDDO
+(  204)     ENDDO
+(  205) !$OMP END DO
+(  206) 
+(  207)   ENDDO
+(  208) 
+(  209) !$OMP END PARALLEL
+(  210) 
+(  211) END SUBROUTINE generate_chunk_kernel
+(  212) 
+(  213) END MODULE generate_chunk_kernel_module

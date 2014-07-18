@@ -1,0 +1,132 @@
+PGC Version 13.5          07/18/2014  14:45:42      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: flux_calc_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C flux kernel.
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details The edge volume fluxes are calculated based on the velocity fields.
+(   22)  */
+(   23) 
+(   24) #include <stdio.h>
+(   25) #include <stdlib.h>
+(   26) #include "ftocmacros.h"
+(   27) #include <math.h>
+(   28) 
+(   29) void flux_calc_kernel_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(   30)                           double *dbyt,
+
+
+
+PGC Version 13.5          07/18/2014  14:45:42      page 2
+
+
+(   31)                           double *xarea,
+(   32)                           double *yarea,
+(   33)                           double *xvel0,
+(   34)                           double *yvel0,
+(   35)                           double *xvel1,
+(   36)                           double *yvel1,
+(   37)                           double *vol_flux_x,
+(   38)                           double *vol_flux_y)
+(   39) {
+(   40)   int x_min=*xmin;
+(   41)   int x_max=*xmax;
+(   42)   int y_min=*ymin;
+(   43)   int y_max=*ymax;
+(   44)   double dt=*dbyt;
+(   45) 
+(   46)   int j,k;
+(   47)   
+(   48) #pragma omp parallel
+(   49)  {
+(   50) 
+(   51) #pragma omp for private(j)
+(   52)   for (k=y_min;k<=y_max;k++) {
+(   53) #pragma ivdep
+(   54)     for (j=x_min;j<=x_max+1;j++) {
+(   55)       vol_flux_x[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=0.25*dt*xarea[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   56)                             *(xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   57)                              +xvel0[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]
+(   58)                              +xvel1[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   59)                              +xvel1[FTNREF2D(j  ,k+1,x_max+5,x_min-2,y_min-2)]);
+(   60)     }
+(   61)   }
+(   62) 
+(   63) #pragma omp for private(j)
+(   64)   for (k=y_min;k<=y_max+1;k++) {
+(   65) #pragma ivdep
+(   66)     for (j=x_min;j<=x_max;j++) {
+(   67)       vol_flux_y[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=0.25*dt*yarea[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]
+(   68)                             *(yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   69)                              +yvel0[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]
+(   70)                              +yvel1[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]
+(   71)                              +yvel1[FTNREF2D(j+1,k  ,x_max+5,x_min-2,y_min-2)]);
+(   72)     }
+(   73)   }
+(   74) 
+(   75)  }
+(   76) 
+(   77) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

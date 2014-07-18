@@ -1,0 +1,264 @@
+PGC Version 13.5          07/18/2014  14:45:41      page 1
+
+
+Switches: -list -object -noxref -nocode -debug -nosingle
+          -opt 2  -inform severe   
+          -noes 
+          -def unix
+          -def __unix
+          -def __unix__
+          -def linux
+          -def __linux
+          -def __linux__
+          -def __NO_MATH_INLINES
+          -def __x86_64
+          -def __x86_64__
+          -def __LONG_MAX__=9223372036854775807L
+          -def __SIZE_TYPE__=unsigned long int
+          -def __PTRDIFF_TYPE__=long int
+          -def __THROW=
+          -def __extension__=
+          -def __amd_64__amd64__
+          -def __k8
+          -def __k8__
+          -def __SSE__
+          -def __MMX__
+          -def __SSE2__
+          -def __SSE3__
+          -def __SSSE3__
+          -def #machine(x86_64) #lint(off) #system(posix) #cpu(x86_64)
+          -def __pgnu_vsn=40407
+          -idir /usr/mpi/pgi/mvapich2-1.7-qlc/include
+Filename: generate_chunk_kernel_c.c
+
+(    1) /*Crown Copyright 2012 AWE.
+(    2) *
+(    3) * This file is part of CloverLeaf.
+(    4) *
+(    5) * CloverLeaf is free software: you can redistribute it and/or modify it under
+(    6) * the terms of the GNU General Public License as published by the
+(    7) * Free Software Foundation, either version 3 of the License, or (at your option)
+(    8) * any later version.
+(    9) *
+(   10) * CloverLeaf is distributed in the hope that it will be useful, but
+(   11) * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+(   12) * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+(   13) * details.
+(   14) *
+(   15) * You should have received a copy of the GNU General Public License along with
+(   16) * CloverLeaf. If not, see http://www.gnu.org/licenses/. */
+(   17) 
+(   18) /**
+(   19)  *  @brief C mesh chunk generator
+(   20)  *  @author Wayne Gaudin
+(   21)  *  @details Generates the field data on a mesh chunk based on the user specified
+(   22)  *  input for the states.
+(   23)  *   
+(   24)  *  Note that state one is always used as the background state, which is then
+(   25)  *  overwritten by further state definitions.
+(   26)  */
+(   27) 
+(   28) #include <stdio.h>
+(   29) #include <stdlib.h>
+(   30) #include "ftocmacros.h"
+
+
+
+PGC Version 13.5          07/18/2014  14:45:41      page 2
+
+
+(   31) #include <math.h>
+(   32) 
+(   33) void generate_chunk_kernel_c_(int *xmin,int *xmax,int *ymin,int *ymax,
+(   34)                               double *vertexx,
+(   35)                               double *vertexy,
+(   36)                               double *cellx,
+(   37)                               double *celly,
+(   38)                               double *density0,
+(   39)                               double *energy0,
+(   40)                               double *xvel0,
+(   41)                               double *yvel0,
+(   42)                               int *nmbr_f_stts,
+(   43)                               double *state_density,
+(   44)                               double *state_energy,
+(   45)                               double *state_xvel,
+(   46)                               double *state_yvel,
+(   47)                               double *state_xmin,
+(   48)                               double *state_xmax,
+(   49)                               double *state_ymin,
+(   50)                               double *state_ymax,
+(   51)                               double *state_radius,
+(   52)                               int *state_geometry,
+(   53)                               int *g_rct,
+(   54)                               int *g_crc,
+(   55)                               int *g_pnt)
+(   56) 
+(   57) 
+(   58) {
+(   59)   int x_min=*xmin;
+(   60)   int x_max=*xmax;
+(   61)   int y_min=*ymin;
+(   62)   int y_max=*ymax;
+(   63)   int number_of_states=*nmbr_f_stts;
+(   64)   int g_rect=*g_rct;
+(   65)   int g_circ=*g_crc;
+(   66)   int g_point=*g_pnt;
+(   67)   double radius,x_cent,y_cent;
+(   68)   int state;
+(   69) 
+(   70)   int j,k,jt,kt;
+(   71) 
+(   72) #pragma omp parallel
+(   73)  {
+(   74)   /* State 1 is always the background state */
+(   75) #pragma omp for private(j,k)
+(   76)   for (k=y_min-2;k<=y_max+2;k++) {
+(   77) #pragma ivdep
+(   78)     for (j=x_min-2;j<=x_max+2;j++) {
+(   79)       energy0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_energy[FTNREF1D(1,1)];
+(   80)     }
+(   81)   }
+(   82) 
+(   83) #pragma omp for private(j,k)
+(   84)   for (k=y_min-2;k<=y_max+2;k++) {
+(   85) #pragma ivdep
+(   86)     for (j=x_min-2;j<=x_max+2;j++) {
+(   87)       density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_density[FTNREF1D(1,1)];
+(   88)    }
+(   89)   }
+(   90) 
+
+
+
+PGC Version 13.5          07/18/2014  14:45:41      page 3
+
+
+(   91) #pragma omp for private(j,k)
+(   92)   for (k=y_min-2;k<=y_max+2;k++) {
+(   93) #pragma ivdep
+(   94)     for (j=x_min-2;j<=x_max+2;j++) {
+(   95)       xvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=state_xvel[FTNREF1D(1,1)];
+(   96)    }
+(   97)   }
+(   98) 
+(   99) #pragma omp for private(j,k)
+(  100)   for (k=y_min-2;k<=y_max+2;k++) {
+(  101) #pragma ivdep
+(  102)     for (j=x_min-2;j<=x_max+2;j++) {
+(  103)       yvel0[FTNREF2D(j  ,k  ,x_max+5,x_min-2,y_min-2)]=state_yvel[FTNREF1D(1,1)];
+(  104)    }
+(  105)   }
+(  106) 
+(  107)   for ( state=2;state<=number_of_states;state++) {
+(  108) 
+(  109) /* Could the velocity setting be thread unsafe? */
+(  110)     x_cent=state_xmin[FTNREF1D(state,1)];
+(  111)     y_cent=state_ymin[FTNREF1D(state,1)];
+(  112) 
+(  113) #pragma omp for private(radius,j,k)
+(  114)     for (k=y_min-2;k<=y_max+2;k++) {
+(  115) #pragma ivdep
+(  116)       for (j=x_min-2;j<=x_max+2;j++) {
+(  117)         if(state_geometry[FTNREF1D(state,1)]==g_rect ) {
+(  118)           if(vertexx[FTNREF1D(j+1,x_min-2)]>=state_xmin[FTNREF1D(state,1)] && vertexx[FTNREF1D(j,x_min-2)]<state_xmax[FTNREF
+(  119)             if(vertexy[FTNREF1D(k+1,y_min-2)]>=state_ymin[FTNREF1D(state,1)] && vertexy[FTNREF1D(k,y_min-2)]<state_ymax[FTNR
+(  120)               density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_density[FTNREF1D(state,1)];
+(  121)               energy0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_energy[FTNREF1D(state,1)];
+(  122)               for (kt=k;kt<=k+1;kt++) {
+(  123)                 for (jt=j;jt<=j+1;jt++) {
+(  124) 		  xvel0[FTNREF2D(jt,kt,x_max+5,x_min-2,y_min-2)]=state_xvel[FTNREF1D(state,1)];
+(  125) 		  yvel0[FTNREF2D(jt,kt,x_max+5,x_min-2,y_min-2)]=state_yvel[FTNREF1D(state,1)];
+(  126) 	        }
+(  127) 	      }
+(  128)             }
+(  129)           }
+(  130) 	}else if(state_geometry[FTNREF1D(state,1)]==g_circ ) {
+(  131)           radius=sqrt((cellx[FTNREF1D(j,x_min-2)]-x_cent)*(cellx[FTNREF1D(j,x_min-2)]-x_cent)+(celly[FTNREF1D(k,y_min-2)]-y_
+(  132)           if(radius<=state_radius[FTNREF1D(state,1)]) {
+(  133)             density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_density[FTNREF1D(state,1)];
+(  134)             energy0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_density[FTNREF1D(state,1)];
+(  135)             for (kt=k;kt<=k+1;kt++) {
+(  136)               for (jt=j;jt<=j+1;jt++) {
+(  137)                 xvel0[FTNREF2D(jt,kt,x_max+5,x_min-2,y_min-2)]=state_xvel[FTNREF1D(state,1)];
+(  138)                 yvel0[FTNREF2D(jt,kt,x_max+5,x_min-2,y_min-2)]=state_yvel[FTNREF1D(state,1)];
+(  139)               }
+(  140)             }
+(  141)           }
+(  142) 	}else if(state_geometry[FTNREF1D(state,1)]==g_point) {
+(  143)           if(vertexx[FTNREF1D(j,x_min-2)]==x_cent && vertexy[FTNREF1D(j,x_min-2)]==y_cent) {
+(  144)             density0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_density[FTNREF1D(state,1)];
+(  145)             energy0[FTNREF2D(j  ,k  ,x_max+4,x_min-2,y_min-2)]=state_density[FTNREF1D(state,1)];
+(  146)             for (kt=k;kt<=k+1;kt++) {
+(  147)               for (jt=j;jt<=j+1;jt++) {
+(  148)                 xvel0[FTNREF2D(jt,kt,x_max+5,x_min-2,y_min-2)]=state_xvel[FTNREF1D(state,1)];
+(  149)                 yvel0[FTNREF2D(jt,kt,x_max+5,x_min-2,y_min-2)]=state_yvel[FTNREF1D(state,1)];
+(  150) 	      }
+
+
+
+PGC Version 13.5          07/18/2014  14:45:41      page 4
+
+
+(  151) 	    }
+(  152) 	  }
+(  153) 	}
+(  154)       }
+(  155) 
+(  156)     }
+(  157) 
+(  158)   }
+(  159) 
+(  160)  }
+(  161) 
+(  162) }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

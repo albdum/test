@@ -14,8 +14,7 @@ __global double * __restrict const soundspeed )
 
         v = 1.0/density[THARR3D(0,0,0,0,0)];
 
-        pressure[THARR3D(0,0,0,0,0)] = (1.4 - 1.0)
-            *density[THARR3D(0,0,0,0,0)]*energy[THARR3D(0,0,0,0,0)];
+        pressure[THARR3D(0,0,0,0,0)] = (1.4 - 1.0)*density[THARR3D(0,0,0,0,0)]*energy[THARR3D(0,0,0,0,0)];
 
         pres_by_ener = (1.4 - 1.0)*density[THARR3D(0,0,0,0,0)];
 

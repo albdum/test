@@ -30,7 +30,7 @@ SUBROUTINE advec_mom_driver(chunk,which_vel,direction,sweep_number)
 
   IMPLICIT NONE
 
-  INTEGER :: chunk,which_vel,direction,sweep_number
+  INTEGER :: chunk,which_vel,direction,sweep_number,advec_int
 
   IF(chunks(chunk)%task.EQ.parallel%task) THEN
 

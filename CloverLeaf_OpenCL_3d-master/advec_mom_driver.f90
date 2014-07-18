@@ -68,7 +68,7 @@ SUBROUTINE advec_mom_driver(chunk,which_vel,direction,sweep_number)
                           direction                               )
     ELSEIF(use_opencl_kernels)THEN
 
-	if (advect_x .eq. .true.) then
+	if (advect_x .eqv. .true.) then
 		advec_int = 1
     	else
 		advec_int = 0

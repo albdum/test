@@ -228,7 +228,6 @@ OCL_FILES=\
 	PdV_kernel_ocl.o \
 	generate_chunk_kernel_ocl.o \
 	advec_mom_kernel_ocl.o \
-	update_halo_kernel_ocl.o \
 	advec_cell_kernel_ocl.o \
 	calc_dt_kernel_ocl.o \
 	revert_kernel_ocl.o \

@@ -5,7 +5,8 @@ __kernel void advec_mom_vol
  __global const double* __restrict const volume,
  __global const double* __restrict const vol_flux_x,
  __global const double* __restrict const vol_flux_y,
- __global const double* __restrict const vol_flux_z)
+ __global const double* __restrict const vol_flux_z,
+int advect_int)
 {
     __kernel_indexes;
 
@@ -13,52 +14,44 @@ __kernel void advec_mom_vol
     && /*column >= (x_min + 1) - 2 &&*/ column <= (x_max + 1) + 2
     && /*slice >= (z_min + 1) - 2 &&*/ slice <= (z_max + 1) + 2)
     {
-        if(mom_sweep == 1)
+        if(mom_sweep == 1)//direction=1 sweep=1
         {
           post_vol[THARR3D(0,0,0,1,1)]= volume[THARR3D(0,0,0,0,0)]+vol_flux_y[THARR3D(0 ,1,0,0,1 )]-vol_flux_y[THARR3D(0,0,0,0,1)]
 		+vol_flux_z[THARR3D(0 ,0 ,1,,0,0)]-vol_flux_z[THARR3D(0,0,0,0,0)];
           pre_vol[THARR3D(0,0,0,1,1)]=post_vol[THARR3D(0,0,0,1,1)]+vol_flux_x[THARR3D(1,0 ,0,1,0 )]-vol_flux_x[THARR3D(0,0,0,1,0)];
 
         }
-        else if(mom_sweep == 2)
+        else if(mom_sweep == 3)//direction=3 sweep=1
         {
-            post_vol[THARR3D(0, 0, 1)] = volume[THARR3D(0, 0, 0)]
-                + vol_flux_x[THARR3D(1, 0, 1)] - vol_flux_x[THARR3D(0, 0, 1)];
-            pre_vol[THARR3D(0, 0, 1)] = post_vol[THARR3D(0, 0, 1)]
-                + vol_flux_y[THARR3D(0, 1, 0)] - vol_flux_y[THARR3D(0, 0, 0)];
 
-          post_vol(0,0,0,1,1)=volume(0,0,0,0,0) +vol_flux_x(1,0 ,0,1,0 )-vol_flux_x(0,0,0,1,0)
-          pre_vol(0,0,0,1,1)=post_vol(0,0,0,1,1)+vol_flux_y(0 ,1,0,0,1 )-vol_flux_y(0,0,0,0,1)
+          post_vol[THARR3D(0,0,0,1,1)]= volume[THARR3D(0,0,0,0,0)]+vol_flux_x[THARR3D(1,0 ,0,1,0 )]-vol_flux_x[THARR3D(0,0,0,1,0)];
+		+vol_flux_y[THARR3D(0 ,1,0 ,0,1)]-vol_flux_y[THARR3D(0,0,0,0,1)];
+          pre_vol[THARR3D(0,0,0,1,1)]=post_vol[THARR3D(0,0,0,1,1)]+vol_flux_z[THARR3D(0 ,0 ,1)]-vol_flux_z[THARR3D(0,0,0,0,0)];
 
         }
-        else if(mom_sweep == 3)
+        else if(mom_sweep == 5)//direction=1 sweep=3
         {
-            post_vol[THARR3D(0, 0, 1)] = volume[THARR3D(0, 0, 0)];
-            pre_vol[THARR3D(0, 0, 1)] = post_vol[THARR3D(0, 0, 1)]
-                + vol_flux_y[THARR3D(0, 1, 0)] - vol_flux_y[THARR3D(0, 0, 0)];
-
-          post_vol(0,0,0,1,1)=volume(0,0,0,0,0) +vol_flux_z(0 ,0 ,1,0,0)-vol_flux_z(0,0,0,0,0)
-          pre_vol(0,0,0,1,1)=post_vol(0,0,0,1,1)+vol_flux_y(0 ,1,0,0,1 )-vol_flux_y(0,0,0,0,1)
-
+          post_vol[THARR3D(0,0,0,1,1)]=volume[THARR3D(0,0,0,0,0)];
+          pre_vol[THARR3D(0,0,0,1,1)]=post_vol[THARR3D(0,0,0,1,1)]+vol_flux_x[THARR3D(1,0 ,0,1,0 )]-vol_flux_x[THARR3D(0,0,0,1,0)];
         }
-        else if(mom_sweep == 4)
+        else if(mom_sweep == 7)//direction=3 sweep=3
         {
-            post_vol[THARR3D(0, 0, 1)] = volume[THARR3D(0, 0, 0)];
-            pre_vol[THARR3D(0, 0, 1)] = post_vol[THARR3D(0, 0, 1)]
-                + vol_flux_x[THARR3D(1, 0, 1)] - vol_flux_x[THARR3D(0, 0, 1)];
+          post_vol[THARR3D(0,0,0,1,1)]=volume[THARR3D(0,0,0,0,0)];
+          pre_vol[THARR3D(0,0,0,1,1)]=post_vol[THARR3D(0,0,0,1,1)]+vol_flux_z[THARR3D(0 ,0 ,1,0,0)]-vol_flux_z[THARR3D(0,0,0,0,0)];
         }
-        else if(mom_sweep == 5)
-        {
-          post_vol(j,k,l)= volume(j,k,l)+vol_flux_x(j+1,k ,l )-vol_flux_x(j,k,l) &
-                                        +vol_flux_y(j ,k+1,l )-vol_flux_y(j,k,l)
-          pre_vol(j,k,l)=post_vol(j,k,l)+vol_flux_z(j ,k ,l+1)-vol_flux_z(j,k,l)
-        }
-        else if(mom_sweep == 7)
-        {
-            post_vol[THARR3D(0, 0, 1)] = volume[THARR3D(0, 0, 0)];
-            pre_vol[THARR3D(0, 0, 1)] = post_vol[THARR3D(0, 0, 1)]
-                + vol_flux_x[THARR3D(1, 0, 1)] - vol_flux_x[THARR3D(0, 0, 1)];
-        }
+	else
+	{
+	  if(advect_int == 1)
+	  {
+	    post_vol[THARR3D(0,0,0,1,1)]=volume[THARR3D(0,0,0,0,0)] +vol_flux_z[THARR3D(0 ,0 ,1,0,0)]-vol_flux_z[THARR3D(0,0,0,0,0)];
+            pre_vol[THARR3D(0,0,0,1,1)]=post_vol[THARR3D(0,0,0,1,1)]+vol_flux_y[THARR3D(0 ,1,0 ,0,1)]-vol_flux_y[THARR3D(0,0,0,0,1)];
+	  }
+	  else //if (advect_int == 0)
+	  {
+	    post_vol[THARR3D(0,0,0,1,1)]=volume[THARR3D(0,0,0,0,0)] +vol_flux_x[THARR3D(1,0 ,0,1,0 )]-vol_flux_x[THARR3D(0,0,0,1,0)];
+            pre_vol[THARR3D(0,0,0,1,1)]=post_vol[THARR3D(0,0,0,1,1)]+vol_flux_y[THARR3D(0 ,1,0,0,1 )]-vol_flux_y[THARR3D(0,0,0,0,1)];
+	  }
+	}
     }
 }
 

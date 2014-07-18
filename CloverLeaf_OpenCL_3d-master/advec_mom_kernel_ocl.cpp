@@ -13,6 +13,7 @@ void CloverChunk::advec_mom_kernel
     int mom_sweep = direction + (2 * (sweep_number - 1));
 
     advec_mom_vol_device.setArg(0, mom_sweep);
+    advec_mom_vol_device.setArg(7, advect_int);
 
     //ENQUEUE(advec_mom_vol_device);
     ENQUEUE_OFFSET(advec_mom_vol_device);

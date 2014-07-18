@@ -277,8 +277,6 @@ SUBROUTINE read_input()
       WRITE(g_out,"(1x,a25)")'Using C Kernels'
     ELSEIF(use_oa_kernels) THEN
       WRITE(g_out,"(1x,a25)")'Using OpenAcc Kernels'
-    ELSEIF(use_opencl_kernels) THEN
-      WRITE(g_out,"(1x,a25)")'Using OpenCL Kernels'
     ENDIF
     WRITE(g_out,*)
     WRITE(g_out,*) 'Input read finished.'

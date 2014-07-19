@@ -2,7 +2,7 @@ __kernel void ideal_gas
 (__global const double * __restrict const density,
 __global const double * __restrict const energy,
 __global double * __restrict const pressure,
-__global double * __restrict const soundspeed )
+__global double * __restrict const soundspeed)
 {
     __kernel_indexes;
 

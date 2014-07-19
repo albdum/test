@@ -25,14 +25,14 @@ __kernel void accelerate
     && /*column >= (x_min + 1) &&*/ column <= (x_max + 1)
     && /*slice >= (z_min + 1) &&*/ slice <= (z_max + 1))
     {
-	nodal_mass=(density0(-1,-1,0,0,0 )*volume(-1,-1,0,0,0 )
-                   +density0(0 ,-1,0,0,0 )*volume(0 ,-1,0,0,0 )
-                   +density0(0 ,0 ,0,0,0 )*volume(0 ,0 ,0,0,0 )
-                   +density0(-1,0 ,0,0,0 )*volume(-1,0 ,0,0,0 )
-                   +density0(-1,-1,-1,0,0)*volume(-1,-1,-1,0,0)
-                   +density0(0 ,-1,-1,0,0)*volume(0 ,-1,-1,0,0)
-                   +density0(0 ,0 ,-1,0,0)*volume(0 ,0 ,-1,0,0)
-                   +density0(-1,0 ,-1,0,0)*volume(-1,0 ,-1,0,0))
+	nodal_mass=(density0[THARR3D(-1,-1,0,0,0 )]*volume[THARR3D(-1,-1,0,0,0 )]
+                   +density0[THARR3D(0 ,-1,0,0,0 )]*volume[THARR3D(0 ,-1,0,0,0 )]
+                   +density0[THARR3D(0 ,0 ,0,0,0 )]*volume[THARR3D(0 ,0 ,0,0,0 )]
+                   +density0[THARR3D(-1,0 ,0,0,0 )]*volume[THARR3D(-1,0 ,0,0,0 )]
+                   +density0[THARR3D(-1,-1,-1,0,0)]*volume[THARR3D(-1,-1,-1,0,0)]
+                   +density0[THARR3D(0 ,-1,-1,0,0)]*volume[THARR3D(0 ,-1,-1,0,0)]
+                   +density0[THARR3D(0 ,0 ,-1,0,0)]*volume[THARR3D(0 ,0 ,-1,0,0)]
+                   +density0[THARR3D(-1,0 ,-1,0,0)]*volume[THARR3D(-1,0 ,-1,0,0)])
                    *0.125;
 
         step_by_mass = 0.25 * dbyt / nodal_mass;

@@ -40,15 +40,15 @@ __kernel void viscosity
                / (celldx[column] + celldx[column + 1]);
         pgrady = (pressure[THARR3D(0, 1, 0,0,0)] - pressure[THARR3D(0, -1, 0,0,0)])
                / (celldy[row] + celldy[row + 1]);
-        pgradz = (pressure(0,0,1,0,0)-pressure(0,0,-1,0,0))/(celldz[slice] + celldz[slice + 1]);
+        pgradz = (pressure[THARR3D(0,0,1,0,0)]-pressure[THARR3D(0,0,-1,0,0)])/(celldz[slice] + celldz[slice + 1]);
 
         pgradx2 = pgradx*pgradx;
         pgrady2 = pgrady*pgrady;
         pgradz2 = pgradz*pgradz;
 
-        limiter = ((0.5*(ugrad)/celldx(column))*pgradx2
-		+ (0.5*(vgrad)/celldy(row))*pgrady2
-		+(0.5*(wgrad)/celldz(slice))*pgradz2
+        limiter = ((0.5*(ugrad)/celldx[column])*pgradx2
+		+ (0.5*(vgrad)/celldy[row])*pgrady2
+		+(0.5*(wgrad)/celldz[slice])*pgradz2
 		+strain2*pgradx*pgrady*pgradz)
 		/ MAX(pgradx2+pgrady2+pgradz2,1.0e-16);
 

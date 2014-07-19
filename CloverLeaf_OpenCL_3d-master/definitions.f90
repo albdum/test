@@ -74,7 +74,7 @@ MODULE definitions_module
    INTEGER      :: test_problem
    LOGICAL      :: complete
 
-   LOGICAL      :: use_OpenCL_kernels
+   LOGICAL      :: use_opencl_kernels
    LOGICAL      :: use_fortran_kernels
    LOGICAL      :: use_C_kernels
    LOGICAL      :: use_OA_kernels

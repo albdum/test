@@ -71,7 +71,7 @@ __kernel void calc_dt
         //x
         dv1=(xvel0[THARR3D(0  ,0  ,0,1,1  )]+xvel0[THARR3D(0  ,1,0,1,1  )]+xvel0[THARR3D(0  ,0  ,1,1,1)]+xvel0[THARR3D(0  ,1,1,1,1)])*xarea[THARR3D(0  ,0  ,0,1,0  )];
 
-        dv2=(xvel0(1,0  ,0,1,1  )+xvel0(1,1,0,1,1  )+xvel0(1,0  ,1,1,1)+xvel0(1,1,1,1,1))*xarea(1,0  ,0,1,0  );
+        dv2=(xvel0[THARR3D(1,0  ,0,1,1  )]+xvel0[THARR3D(1,1,0,1,1  )]+xvel0[THARR3D(1,0  ,1,1,1)]+xvel0[THARR3D(1,1,1,1,1)])*xarea[THARR3D(1,0  ,0,1,0  )];
 
         div += dv2 - dv1;
 

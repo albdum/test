@@ -337,7 +337,7 @@ __kernel void advec_cell_pre_vol_z
     if(/*row >= (y_min + 1) - 2 &&*/ row <= (y_max + 1) + 2
     && /*column >= (x_min + 1) - 2 &&*/ column <= (x_max + 1) + 2
     && /*slice >= (z_min + 1) - 2 &&*/ slice <= (z_max + 1) + 2)
-    {f
+    {
         if(swp_nmbr == 1)
         {
             pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]

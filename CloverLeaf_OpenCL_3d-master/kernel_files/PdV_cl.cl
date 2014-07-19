@@ -67,9 +67,9 @@ __kernel void PdV_predict
         //minimum of total, horizontal, and vertical flux
 	//Maybe this is wrong?
 	min_cell_volume=MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux
-		,volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux
-		,volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux
-		,volume[THARR3D(0,0,0,0,0)]+top_flux-bottom_flux);
+		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux
+		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux
+		,volume[THARR3D(0,0,0,0,0)]+top_flux-bottom_flux)));
 
 #if defined(NO_KERNEL_REDUCTIONS)
         if(volume_change <= 0.0)
@@ -173,9 +173,9 @@ __kernel void PdV_not_predict
         //minimum of total, horizontal, and vertical flux
 	//Maybe this is wrong?
 	min_cell_volume=MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux
-		,volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux
-		,volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux
-		,volume[THARR3D(0,0,0,0,0)]+top_flux-bottom_flux);
+		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux
+		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux
+		,volume[THARR3D(0,0,0,0,0)]+top_flux-bottom_flux)));
 
 #if defined(NO_KERNEL_REDUCTIONS)
         if(volume_change <= 0.0)

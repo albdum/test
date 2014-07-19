@@ -78,3 +78,22 @@ Clover Version    1.100
 
  Setting up initial geometry
 
+
+ Decomposing the mesh into            1  by            1  by            1  chunks
+
+ Generating chunks
+
+ Problem initialised and generated
+
+ Time    0.0000000000000000     
+                       Volume            Mass         Density        Pressure Internal Energy  Kinetic Energy    Total Energy
+ step:      0      0.0000E+00      0.0000E+00             NaN             NaN      0.0000E+00      0.0000E+00      0.0000E+00
+
+ Starting the calculation
+ Step       1 time   0.0000000 control    zvel     timestep   0.00E+00       1,      62 x  2.09-317 y  2.12-314
+
+ Error from timestep:
+ small timestep
+
+ CLOVER is terminating.
+

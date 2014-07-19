@@ -29,9 +29,9 @@ __kernel void update_halo_bottom
 }
 
 __kernel void update_halo_top
-(int x_extra, int y_extra, int z_extra,
- int x_invert, int y_invert, int z_invert,
- int x_face, int y_face, int z_face,
+(int x_extra, int y_extra,
+ int x_invert, int y_invert,
+ int x_face, int y_face,
  int grid_type, int depth, 
  __global double * __restrict const cur_array)
 {
@@ -53,9 +53,9 @@ __kernel void update_halo_top
 }
 
 __kernel void update_halo_left
-(int x_extra, int y_extra, int z_extra,
- int x_invert, int y_invert, int z_invert,
- int x_face, int y_face, int z_face,
+(int x_extra, int y_extra,
+ int x_invert, int y_invert,
+ int x_face, int y_face,
  int grid_type, int depth, 
  __global double * __restrict const cur_array)
 {
@@ -74,9 +74,9 @@ __kernel void update_halo_left
 }
 
 __kernel void update_halo_right
-(int x_extra, int y_extra, int z_extra,
- int x_invert, int y_invert, int z_invert,
- int x_face, int y_face, int z_face,
+(int x_extra, int y_extra,
+ int x_invert, int y_invert,
+ int x_face, int y_face,
  int grid_type, int depth, 
  __global double * __restrict const cur_array)
 {

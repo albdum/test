@@ -119,7 +119,7 @@ ifdef IEEE
 endif
 
 LDLIBS+=-lOpenCL -lstdc++
-CXXFLAGS+=-D CL_USE_DEPRECATED_OPENCL_1_1_APIS -D __CL_ENABLE_EXCEPTIONS
+CXXFLAGS+=-D CL_USE_DEPRECATED_OPENCL_1_1_APIS -D __CL_ENABLE_EXCEPTIONS -fpermissive
 VPATH+=kernel_files
 
 ifdef VERBOSE
@@ -213,6 +213,7 @@ OCL_FILES=\
 	PdV_kernel_ocl.o \
 	generate_chunk_kernel_ocl.o \
 	advec_mom_kernel_ocl.o \
+	update_halo_kernel_ocl.o \
 	advec_cell_kernel_ocl.o \
 	calc_dt_kernel_ocl.o \
 	revert_kernel_ocl.o \

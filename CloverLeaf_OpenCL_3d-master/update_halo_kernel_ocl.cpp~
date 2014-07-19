@@ -5,6 +5,8 @@ extern CloverChunk chunk;
 #define CHUNK_right 1
 #define CHUNK_bottom 2
 #define CHUNK_top 3
+#define CHUNK_front 4
+#define CHUNK_back 5
 
 #define EXTERNAL_FACE (-1)
 
@@ -17,8 +19,8 @@ const static cell_info_t Y_FACE( 0, 1, 1, -1, 0, 1, Y_FACE_DATA);
 
 extern "C" void update_halo_kernel_ocl_
 (const int* chunk_neighbours,
- int* fields,
- int* depth)
+const int* fields,
+const int* depth)
 {
     chunk.update_halo_kernel(fields, *depth, chunk_neighbours);
 }
@@ -61,8 +63,8 @@ update_##dir##_local_size[depth-1]); \
 
 void CloverChunk::update_halo_kernel
 (const int* fields,
- int depth,
- int* chunk_neighbours)
+const int depth,
+const int* chunk_neighbours)
 {
 #define HALO_UPDATE_RESIDENT(arr, type) \
 if(fields[FIELD_ ## arr] == 1) \

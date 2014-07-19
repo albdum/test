@@ -20,7 +20,6 @@ ocl_strings.o: ocl_strings.cpp ocl_strings.hpp ocl_common.hpp
 PdV_kernel_ocl.o: PdV_kernel_ocl.cpp ocl_common.hpp ocl_reduction.hpp
 reset_field_kernel_ocl.o: reset_field_kernel_ocl.cpp ocl_common.hpp
 revert_kernel_ocl.o: revert_kernel_ocl.cpp ocl_common.hpp
-update_halo_kernel_ocl.o: update_halo_kernel_ocl.cpp ocl_common.hpp
 viscosity_kernel_ocl.o: viscosity_kernel_ocl.cpp ocl_common.hpp
 accelerate.o accelerate_module.mod: accelerate.f90 clover_module.mod \
  accelerate_kernel_module.mod

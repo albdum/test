@@ -209,7 +209,7 @@ MODULE definitions_module
 
 
   TYPE(chunk_type),  ALLOCATABLE       :: chunks(:)
-  INTEGER                              :: number_of_chunks
+  INTEGER                              :: chunks_per_task
 
   TYPE(grid_type)                      :: grid
 

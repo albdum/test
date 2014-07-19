@@ -74,7 +74,7 @@ MODULE definitions_module
    INTEGER      :: test_problem
    LOGICAL      :: complete
 
-   LOGICAL      :: use_OpenCL_kernels
+   LOGICAL      :: use_opencl_kernels
    LOGICAL      :: use_fortran_kernels
    LOGICAL      :: use_C_kernels
    LOGICAL      :: use_OA_kernels
@@ -209,7 +209,7 @@ MODULE definitions_module
 
 
   TYPE(chunk_type),  ALLOCATABLE       :: chunks(:)
-  INTEGER                              :: number_of_chunks
+  INTEGER                              :: chunks_per_state
 
   TYPE(grid_type)                      :: grid
 

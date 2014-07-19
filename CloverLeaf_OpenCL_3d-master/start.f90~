@@ -38,7 +38,6 @@ SUBROUTINE start
   INTEGER, ALLOCATABLE :: right(:),left(:),top(:),bottom(:),back(:),front(:)
 
   INTEGER :: fields(NUM_FIELDS) !, chunk_task_responsible_for 
-
   LOGICAL :: profiler_off
 
   IF(parallel%boss)THEN
@@ -55,21 +54,21 @@ SUBROUTINE start
 
   CALL clover_get_num_chunks(number_of_chunks)
 
-  ALLOCATE(chunks(1:chunks_per_task))
+  ALLOCATE(chunks(1:number_of_chunks))
 
-  ALLOCATE(left(1:chunks_per_task))
-  ALLOCATE(right(1:chunks_per_task))
-  ALLOCATE(bottom(1:chunks_per_task))
-  ALLOCATE(top(1:chunks_per_task))
-  ALLOCATE(back(1:chunks_per_task))
-  ALLOCATE(front(1:chunks_per_task))
+  ALLOCATE(left(1:number_of_chunks))
+  ALLOCATE(right(1:number_of_chunks))
+  ALLOCATE(bottom(1:number_of_chunks))
+  ALLOCATE(top(1:number_of_chunks))
+  ALLOCATE(back(1:number_of_chunks))
+  ALLOCATE(front(1:number_of_chunks))
 
   CALL clover_decompose(grid%x_cells,grid%y_cells,grid%z_cells,left,right,bottom,top,back,front)
 
-  DO c=1,chunks_per_task
+  DO c=1,number_of_chunks
       
     ! Needs changing so there can be more than 1 chunk per task
-    chunks(c)%task = parallel%task
+    chunks(c)%task = c-1
 
     !chunk_task_responsible_for = parallel%task+1
 
@@ -105,13 +104,13 @@ SUBROUTINE start
 
   CALL clover_barrier
 
-  DO c=1,chunks_per_task
+  DO c=1,number_of_chunks
     IF(chunks(c)%task.EQ.parallel%task)THEN
       CALL clover_allocate_buffers(c)
     ENDIF
   ENDDO
 
-  DO c=1,chunks_per_task
+  DO c=1,number_of_chunks
     IF(chunks(c)%task.EQ.parallel%task)THEN
       CALL initialise_chunk(c)
     ENDIF
@@ -121,7 +120,7 @@ SUBROUTINE start
      WRITE(g_out,*) 'Generating chunks'
   ENDIF
 
-  DO c=1,chunks_per_task
+  DO c=1,number_of_chunks
     IF(chunks(c)%task.EQ.parallel%task)THEN
       CALL generate_chunk(c)
     ENDIF
@@ -136,7 +135,7 @@ SUBROUTINE start
   profiler_off=profiler_on
   profiler_on=.FALSE.
 
-  DO c = 1, chunks_per_task
+  DO c = 1, number_of_chunks
     CALL ideal_gas(c,.FALSE.)
   END DO
 

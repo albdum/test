@@ -38,7 +38,6 @@ SUBROUTINE start
   INTEGER, ALLOCATABLE :: right(:),left(:),top(:),bottom(:),back(:),front(:)
 
   INTEGER :: fields(NUM_FIELDS) !, chunk_task_responsible_for 
-
   LOGICAL :: profiler_off
 
   IF(parallel%boss)THEN
@@ -53,7 +52,7 @@ SUBROUTINE start
 
   CALL clover_barrier
 
-  CALL clover_get_num_chunks(number_of_chunks)
+  CALL clover_get_num_chunks(chunks_per_task)
 
   ALLOCATE(chunks(1:chunks_per_task))
 
@@ -69,7 +68,7 @@ SUBROUTINE start
   DO c=1,chunks_per_task
       
     ! Needs changing so there can be more than 1 chunk per task
-    chunks(c)%task = parallel%task
+    chunks(c)%task = c-1
 
     !chunk_task_responsible_for = parallel%task+1
 

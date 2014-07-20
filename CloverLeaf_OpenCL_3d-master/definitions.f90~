@@ -94,6 +94,7 @@ MODULE definitions_module
                           ,reset           &
                           ,revert          &
                           ,flux            &
+                          ,set_field       &
                           ,halo_exchange
                      
    END TYPE profiler_type
@@ -209,7 +210,7 @@ MODULE definitions_module
 
 
   TYPE(chunk_type),  ALLOCATABLE       :: chunks(:)
-  INTEGER                              :: chunks_per_state
+  INTEGER                              :: chunks_per_task
 
   TYPE(grid_type)                      :: grid
 

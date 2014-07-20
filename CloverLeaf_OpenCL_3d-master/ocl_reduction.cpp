@@ -11,21 +11,19 @@ void CloverChunk::initReduction
     /*
      *  create a reduction kernel, one for each layer, with the right parameters
      */
-    printf("\n---- Reduction ----\n");
+    printf("\n---- Reduction Info----\n");
     fprintf(DBGOUT, "\n---- Reduction ----\n");
-#if defined(NO_KERNEL_REDUCTIONS)
- // no reduction inside kernel
- const size_t total_to_reduce = total_cells;
-#else
-// each work group reduces to 1 value inside each kernel
- const size_t total_to_reduce = ceil(float(total_cells)/(LOCAL_X*LOCAL_Y*LOCAL_Z));
-#endif
+
 
     // each work group reduces to 1 value inside each kernel
-    //const size_t total_to_reduce = ceil(float(reduced_cells)/(LOCAL_X*LOCAL_Y*LOCAL_Z));
+    const size_t total_to_reduce = ceil(float(reduced_cells)/(LOCAL_X*LOCAL_Y*LOCAL_Z));
 
     fprintf(DBGOUT, "Total cells to reduce = %zu\n", total_to_reduce);
-
+    printf("--------REduced cells = %zu--------\n", reduced_cells);
+    printf("--------LOCAL_X = %zu--------\n", LOCAL_X);
+    printf("--------LOCAL_Y = %zu--------\n", LOCAL_Y);
+    printf("--------LOCAL_Z = %zu--------\n", LOCAL_Z);
+    printf("--------Total cells to reduce = %zu--------\n", total_to_reduce);
     size_t reduction_global_size = total_to_reduce;
     fprintf(DBGOUT, "Reduction within work group reduces to = %zu\n", reduction_global_size);
 

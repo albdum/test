@@ -144,6 +144,7 @@ C_FILES=\
 	flux_calc_kernel_c.o            \
 	revert_kernel_c.o               \
 	reset_field_kernel_c.o          \
+	set_field_kernel_c.o          \
 	ideal_gas_kernel_c.o            \
 	viscosity_kernel_c.o            \
 	advec_cell_kernel_c.o			\
@@ -190,7 +191,9 @@ FORTRAN_FILES=\
 	advec_mom_driver.o		\
 	advection.o			\
 	reset_field_kernel.o		\
+	set_field_kernel.o		\
 	reset_field.o			\
+	set_field.o		\
 	hydro.o			\
 	visit.o			\
 	clover_leaf.o

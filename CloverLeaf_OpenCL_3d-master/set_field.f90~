@@ -65,7 +65,7 @@ IF(use_fortran_kernels)THEN
 ENDIF
 
 ENDDO
-  !IF(profiler_on) profiler%set_field=profiler%set_field+(timer()-kernel_time)
+  IF(profiler_on) profiler%set_field=profiler%set_field+(timer()-kernel_time)
 
 END SUBROUTINE set_field
 

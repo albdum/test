@@ -32,6 +32,7 @@ Clover Version    1.100
  use_opencl_kernels                                                                                                                                   
  opencl_vendor=Nvidia                                                                                                                                 
  opencl_type=GPU                                                                                                                                      
+ NO_KERNEL_REDUCTIONS                                                                                                                                 
                                                                                                                                                       
 *endclover                                                                                                                                            
 
@@ -90,7 +91,7 @@ Clover Version    1.100
  step:      0      0.0000E+00      0.0000E+00             NaN             NaN      0.0000E+00      0.0000E+00      0.0000E+00
 
  Starting the calculation
- Step       1 time   0.0000000 control    zvel     timestep   0.00E+00       1,      62 x  2.09-317 y  2.12-314
+ Step       1 time   0.0000000 control    sound    timestep   0.00E+00       1,       1 x  5.00E-02 y  5.00E-02
 
  Error from timestep:
  small timestep

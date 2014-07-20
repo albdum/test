@@ -53,7 +53,6 @@ SUBROUTINE start
   CALL clover_barrier
 
   CALL clover_get_num_chunks(chunks_per_task)
-
   ALLOCATE(chunks(1:chunks_per_task))
 
   ALLOCATE(left(1:chunks_per_task))
@@ -97,7 +96,6 @@ SUBROUTINE start
     chunks(c)%field%x_max = right(c)-left(c)+1
     chunks(c)%field%y_max = top(c)-bottom(c)+1
     chunks(c)%field%z_max = front(c)-back(c)+1
-
   ENDDO
 
   DEALLOCATE(left,right,bottom,top,back,front)

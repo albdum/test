@@ -20,7 +20,15 @@ void CloverChunk::initProgram
     // on ARM, don't use built in functions as they don't exist
     options << "-DCLOVER_NO_BUILTINS ";
 #endif
+#if defined(NO_KERNEL_REDUCTIONS)
+// don't do any reductions inside the kernels
+options << "-D NO_KERNEL_REDUCTIONS ";
+#endif
 
+#ifdef ONED_KERNEL_LAUNCHES
+ // launch kernels with 1d work group size
+ options << "-DONED_KERNEL_LAUNCHES ";
+#endif
 
     // pass in these values so you don't have to pass them in to every kernel
     options << "-Dx_min=" << x_min << " ";

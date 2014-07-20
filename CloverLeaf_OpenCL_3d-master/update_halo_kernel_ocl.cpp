@@ -72,6 +72,7 @@ void CloverChunk::update_halo_kernel
 const int depth,
 const int* chunk_neighbours)
 {
+double test;
 #define HALO_UPDATE_RESIDENT(arr, type) \
 if(fields[FIELD_ ## arr] == 1) \
 { \

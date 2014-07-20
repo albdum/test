@@ -347,7 +347,7 @@ public:
 
     void ideal_gas_kernel(int predict);
 
-    void generate_chunk_kernel(const int number_of_states, 
+    void generate_chunk_kernel(const int chunks_per_task, 
         const double* state_density, const double* state_energy,
         const double* state_xvel, const double* state_yvel,const double* state_zvel,
         const double* state_xmin, const double* state_xmax,
@@ -359,7 +359,7 @@ public:
     void initialise_chunk_kernel(double d_xmin, double d_ymin,double d_zmin,
         double d_dx, double d_dy, double d_dz);
 
-    void update_halo_kernel(const int* chunk_neighbours, const int* fields, int depth);
+    void update_halo_kernel(const int* fields, int depth, const int* chunk_neighbours);
     void update_array
     (cl::Buffer& cur_array,
     const cell_info_t& array_type,

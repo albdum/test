@@ -20,9 +20,9 @@
  end_time=100.0
  end_step=50
 
- !use_opencl_kernels
- !opencl_vendor=Nvidia
- !opencl_type=GPU
+ use_opencl_kernels
+ opencl_vendor=Nvidia
+ opencl_type=GPU
  !NO_KERNEL_REDUCTIONS
 
 *endclover

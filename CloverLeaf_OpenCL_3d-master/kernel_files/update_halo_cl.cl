@@ -11,7 +11,8 @@ __kernel void update_halo_bottom
 
     // offset by 1 if it is anything but a CELL grid
     int b_offset = (grid_type != CELL_DATA) ? 1 : 0;
-
+  if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
+  {
     if (column >= 2 - depth && column <= (x_max + 1) + x_extra + depth)
     {
         if (row < depth)
@@ -22,10 +23,11 @@ __kernel void update_halo_bottom
              * 1 - 2 * row means that row 0 services row 1, and vice versa
              * this means that it can be dispatched with 'depth' rows only
              */
-            cur_array[THARR2D(0, 1 - (2 * row), x_extra)] =
-                y_invert * cur_array[THARR2D(0, offset, x_extra)];
+            cur_array[THARR3D(0, 1 - (2 * row),0, x_extra,y_extra)] =
+                y_invert * cur_array[THARR3D(0, offset,0, x_extra,y_extra)];
         }
     }
+  }
 }
 
 __kernel void update_halo_top
@@ -39,17 +41,19 @@ __kernel void update_halo_top
 
     // if x face data, offset source/dest by - 1
     int x_f_offset = (x_face) ? 1 : 0;
-
+  if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
+  {
     if (column >= 2 - depth && column <= (x_max + 1) + x_extra + depth)
     {
         if (row < depth)
         {
             const int offset = (- row) * 2 - 1 - x_f_offset;
 
-            cur_array[THARR2D(0, y_extra + y_max + 2, x_extra)] =
-                y_invert * cur_array[THARR2D(0, y_max + 2 + offset, x_extra)];
+            cur_array[THARR3D(0, y_extra + y_max + 2,0, x_extra,y_extra)] =
+                y_invert * cur_array[THARR3D(0, y_max + 2 + offset,0, x_extra,y_extra)];
         }
     }
+  }
 }
 
 __kernel void update_halo_left
@@ -63,7 +67,8 @@ __kernel void update_halo_left
     int l_offset = (grid_type != CELL_DATA) ? 1 : 0;
 
     __kernel_indexes;
-
+  if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
+  {
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
         // first in row
@@ -71,6 +76,7 @@ __kernel void update_halo_left
 
         cur_array[row_begin + (1 - column)] = x_invert * cur_array[row_begin + 2 + column + l_offset];
     }
+  }
 }
 
 __kernel void update_halo_right
@@ -84,13 +90,15 @@ __kernel void update_halo_right
     int y_f_offset = (y_face) ? 1 : 0;
 
     __kernel_indexes;
-
+  if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
+  {
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
         const int row_begin = row * (x_max + 4 + x_extra);
 
         cur_array[row_begin + x_max + 2 + x_extra + column] = x_invert * cur_array[row_begin + x_max + 1 - (column + y_f_offset)];
     }
+  }
 }
 
 

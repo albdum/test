@@ -30,7 +30,6 @@ SUBROUTINE hydro
   USE flux_calc_module
   USE advection_module
   USE reset_field_module
-  USE set_field_module
 
   IMPLICIT NONE
 
@@ -140,8 +139,6 @@ SUBROUTINE hydro
         profiler%summary=totals(loc(1))
         CALL clover_allgather(profiler%visit,totals)
         profiler%visit=totals(loc(1))
-        CALL clover_allgather(profiler%set_field,totals)
-        profiler%set_field=totals(loc(1))
 
         IF ( parallel%boss ) THEN
           WRITE(g_out,*)

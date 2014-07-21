@@ -7,8 +7,8 @@
     const size_t loc_column = get_local_id(0);			\
     const size_t loc_row = get_local_id(1);			\
     const size_t loc_slice = get_local_id(2);			\
-    const size_t lid = loc_row*LOCAL_X + loc_column;	\
-    const size_t gid = row*get_global_size(0) + column;
+    const size_t lid = loc_slice*LOCAL_X*LOCAL_Y + loc_row*LOCAL_X + loc_column;	\
+    const size_t gid = slice*get_global_size(1)*get_global_size(0) + row*get_global_size(0) + column;
 
 #define THARR2D(x_offset, y_offset, big_row)        \
     (                                               \
@@ -60,7 +60,9 @@
         }                                                           \
         if(!lid)                                                    \
         {                                                           \
-            out[get_group_id(1)*get_num_groups(0) + get_group_id(0)] = in[0]; \
+            out[get_group_id(2)*get_num_groups(1)*get_num_groups(0) +\
+                get_group_id(1)*get_num_groups(0) + \
+                get_group_id(0)] = in[0]; \
         }
 
 #elif defined(CL_DEVICE_TYPE_CPU)
@@ -74,7 +76,9 @@
             {                                                   \
                 in[0] = operation(in[0], in[offset]);           \
             }                                                   \
-            out[get_group_id(1)*get_num_groups(0) + get_group_id(0)] = in[0]; \
+            out[get_group_id(2)*get_num_groups(1)*get_num_groups(0) +\
+                get_group_id(1)*get_num_groups(0) + \
+                get_group_id(0)] = in[0]; \
         }
 
 #elif defined(CL_DEVICE_TYPE_ACCELERATOR)

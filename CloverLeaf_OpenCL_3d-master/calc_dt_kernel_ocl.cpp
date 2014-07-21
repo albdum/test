@@ -51,7 +51,6 @@ double* xl_pos, double* yl_pos,double* zl_pos, int* jldt, int* kldt, int* lldt, 
     *dt_min_val = reduceValue<double>(min_red_kernels_double, reduce_buf_2);
     double jk_control = reduceValue<double>(max_red_kernels_double, reduce_buf_1);
 
-    jk_control=1.1;
     *dtl_control = 10.01 * (jk_control - (int)jk_control);
 
     jk_control = jk_control - (jk_control - (int)jk_control);

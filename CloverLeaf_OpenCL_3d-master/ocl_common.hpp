@@ -106,7 +106,6 @@ private:
     cl::Kernel viscosity_device;
     cl::Kernel revert_device;
     cl::Kernel reset_field_device;
-    cl::Kernel set_field_device;
     cl::Kernel field_summary_device;
     cl::Kernel calc_dt_device;
 
@@ -378,7 +377,6 @@ public:
 
     void revert_kernel();
 
-    void set_field_kernel();
     void reset_field_kernel();
 
     void viscosity_kernel();

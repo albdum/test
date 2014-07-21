@@ -96,7 +96,7 @@ Clover Version    1.100
  step:      0  0.16000000E+04  0.90000000E+03  0.56250000E+00  0.55000001E+00  0.22000000E+04  0.00000000E+00  0.22000000E+04
  
  Starting the calculation
- Step       1 time   0.0000000 control    sound    timestep   0.00E+00       1,       1 x  5.00E-02 y  5.00E-02
+ Step       1 time   0.0000000 control    zvel     timestep   0.00E+00       1,       1 x  5.00E-02 y  5.00E-02
  
  Error from timestep:
  small timestep

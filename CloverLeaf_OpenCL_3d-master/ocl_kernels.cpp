@@ -20,15 +20,6 @@ void CloverChunk::initProgram
     // on ARM, don't use built in functions as they don't exist
     options << "-DCLOVER_NO_BUILTINS ";
 #endif
-#if defined(NO_KERNEL_REDUCTIONS)
-// don't do any reductions inside the kernels
-options << "-D NO_KERNEL_REDUCTIONS ";
-#endif
-
-#ifdef ONED_KERNEL_LAUNCHES
- // launch kernels with 1d work group size
- options << "-DONED_KERNEL_LAUNCHES ";
-#endif
 
     // pass in these values so you don't have to pass them in to every kernel
     options << "-Dx_min=" << x_min << " ";
@@ -77,7 +68,6 @@ options << "-D NO_KERNEL_REDUCTIONS ";
     compileKernel(options_str, src_generate_chunk_cl, "generate_chunk", generate_chunk_device);
 
     compileKernel(options_str, src_reset_field_cl, "reset_field", reset_field_device);
-    compileKernel(options_str, src_set_field_cl, "set_field", set_field_device);
 
     compileKernel(options_str, src_PdV_cl, "PdV_predict", PdV_predict_device);
     compileKernel(options_str, src_PdV_cl, "PdV_not_predict", PdV_not_predict_device);
@@ -671,12 +661,6 @@ void CloverChunk::initArgs
     reset_field_device.setArg(7, yvel1);
     reset_field_device.setArg(8, zvel0);
     reset_field_device.setArg(9, zvel1);
-
-    // set field
-    set_field_device.setArg(0, density0);
-    set_field_device.setArg(1, density1);
-    set_field_device.setArg(2, energy0);
-    set_field_device.setArg(3, energy1);
 
     // generate chunk
     generate_chunk_init_device.setArg(0, density0);

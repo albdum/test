@@ -94,7 +94,7 @@ void CloverChunk::enqueueKernel
             std::string func_name;
             kernel.getInfo(CL_KERNEL_FUNCTION_NAME, &func_name);
 
-            #if 1
+            #if 0
             fprintf(stdout, "Enqueueing kernel: %s\n", func_name.c_str());
             fprintf(stdout, "%zu global dimensions\n", global_range.dimensions());
             fprintf(stdout, "%zu local dimensions\n", local_range.dimensions());

@@ -1,0 +1,7 @@
+*.o
+*.mod
+*.*~
+*.swp
+_kernel_strings.cpp
+clover_leaf
+ocl_kernel_hdr.hpp

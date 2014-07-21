@@ -413,11 +413,15 @@ public:
                                    local_group_size);
 #endif
 
+#if 0
     #define ENQUEUE(knl)                                    \
         CloverChunk::enqueueKernel(knl, __LINE__, __FILE__, \
                                    cl::NullRange,           \
                                    global_size,             \
                                    local_group_size);
+#else
+    #define ENQUEUE(knl) ENQUEUE_OFFSET(knl)
+#endif
 
     // reduction
     template <typename T>

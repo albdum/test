@@ -24,5 +24,6 @@
  opencl_vendor=Nvidia
  opencl_type=GPU
  !NO_KERNEL_REDUCTIONS
+ profiler_on=1
 
 *endclover

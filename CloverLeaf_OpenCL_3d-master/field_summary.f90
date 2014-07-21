@@ -78,7 +78,7 @@ SUBROUTINE field_summary()
       IF(chunks(c)%task.EQ.parallel%task) THEN
         CALL field_summary_kernel_ocl(vol,mass,ie,ke,press)
       ENDIF
-ENDDO
+    ENDDO
   ELSEIF(use_C_kernels)THEN
     DO c=1,chunks_per_task
       IF(chunks(c)%task.EQ.parallel%task) THEN

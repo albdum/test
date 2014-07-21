@@ -99,9 +99,9 @@ void CloverChunk::enqueueKernel
             fprintf(stdout, "%zu global dimensions\n", global_range.dimensions());
             fprintf(stdout, "%zu local dimensions\n", local_range.dimensions());
             fprintf(stdout, "%zu offset dimensions\n", offset_range.dimensions());
-            fprintf(stdout, "Global size: [%zu %zu]\n", global_range[0], global_range[1]);
-            fprintf(stdout, "Local size:  [%zu %zu]\n", local_range[0], local_range[1]);
-            fprintf(stdout, "Offset size: [%zu %zu]\n", offset_range[0], offset_range[1]);
+            fprintf(stdout, "Global size: [%zu %zu %zu]\n", global_range[0],global_range[1], global_range[2]);
+            fprintf(stdout, "Local size:  [%zu %zu %zu]\n", local_range[0], local_range[1], local_range[2]);
+            fprintf(stdout, "Offset size: [%zu %zu %zu]\n", offset_range[0],offset_range[1], offset_range[2]);
             fprintf(stdout, "\n");
             fflush(stdout);
             #endif

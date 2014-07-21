@@ -1,12 +1,12 @@
-
+ 
 Clover Version    1.100
        MPI Version
     OpenMP Version
    Task Count      1
- Thread Count:    16
-
+ Thread Count:     8
+ 
  Clover will run from the following input:-
-
+ 
 *clover                                                                                                                                               
  state 1 density=0.125 energy=2.0                                                                                                                     
  state 2 density=1.0 energy=2.5 geometry=cuboid xmin=0.0 xmax=50.0 ymin=0.0 ymax=4.0 zmin=0.0 zmax=4.0                                                
@@ -33,20 +33,21 @@ Clover Version    1.100
  opencl_vendor=Nvidia                                                                                                                                 
  opencl_type=GPU                                                                                                                                      
  !NO_KERNEL_REDUCTIONS                                                                                                                                
+ profiler_on=1                                                                                                                                        
                                                                                                                                                       
 *endclover                                                                                                                                            
-
+ 
  Initialising and generating
-
+ 
  Reading input file
-
+ 
  Reading specification for state            1
-
+ 
             state density   0.1250E+00
              state energy   0.2000E+01
-
+ 
  Reading specification for state            2
-
+ 
             state density   0.1000E+01
              state energy   0.2500E+01
       state geometry cuboid
@@ -56,7 +57,7 @@ Clover Version    1.100
                state ymax   0.4000E+01
                state zmin   0.0000E+00
                state zmax   0.4000E+01
-
+ 
                       xmin  0.0000E+00
                       ymin  0.0000E+00
                       zmin  0.0000E+00
@@ -72,29 +73,31 @@ Clover Version    1.100
                    z_cells          60
                   end_time  0.1000E+03
                   end_step          50
-
+               Profiler on
+ 
       Using OpenCL Kernels
-
+ 
  Input read finished.
-
+ 
  Setting up initial geometry
-
-
- Decomposing the mesh into            1  by            1  by            1  chunks
-
+ 
+ 
+ Decomposing the mesh into            1  by            1  by            1  chunk
+ s
+ 
  Generating chunks
-
+ 
  Problem initialised and generated
-
- Time    0.0000000000000000     
+ 
+ Time   0.000000000000000E+000
                        Volume            Mass         Density        Pressure Internal Energy  Kinetic Energy    Total Energy
- step:      0      0.0000E+00      0.0000E+00             NaN             NaN      0.0000E+00      0.0000E+00      0.0000E+00
-
+ step:      0      0.2667E+02      0.3333E+01      0.1250E+00      0.1000E+00      0.6667E+01      0.0000E+00      0.6667E+01
+ 
  Starting the calculation
  Step       1 time   0.0000000 control    sound    timestep   0.00E+00       1,       1 x  5.00E-02 y  5.00E-02
-
+ 
  Error from timestep:
  small timestep
-
+ 
  CLOVER is terminating.
-
+ 

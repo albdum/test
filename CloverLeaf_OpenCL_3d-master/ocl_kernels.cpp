@@ -252,7 +252,7 @@ cl::Program CloverChunk::compileProgram
 void CloverChunk::initSizes
 (void)
 {
-    fprintf(DBGOUT, "Local size = %zux%zu\n", LOCAL_X, LOCAL_Y, LOCAL_Z);
+    fprintf(DBGOUT, "Local size = %zux%zux%zu\n", LOCAL_X, LOCAL_Y, LOCAL_Z);
 
     // pad the global size so the local size fits
     const size_t glob_x = x_max+5 +
@@ -263,7 +263,7 @@ void CloverChunk::initSizes
         (((z_max+5)%LOCAL_Z == 0) ? 0 : (LOCAL_Z - ((z_max+5)%LOCAL_Z)));
     total_cells = glob_x*glob_y*glob_z;
 
-    fprintf(DBGOUT, "Global size = %zux%zu\n", glob_x, glob_y, glob_z);
+    fprintf(DBGOUT, "Global size = %zux%zux%zu\n", glob_x, glob_y, glob_z);
     global_size = cl::NDRange(glob_x, glob_y, glob_z);
 
     /*
@@ -375,60 +375,72 @@ void CloverChunk::initSizes
      *  figure out offset launch sizes for the various kernels
      *  no 'smart' way to do this?
      */
-    #define FIND_PADDING_SIZE(knl, vmin, vmax, hmin, hmax)                      \
+    #define FIND_PADDING_SIZE(knl, vmin, vmax, hmin, hmax, smin, smax)                      \
     {                                                                           \
         size_t global_horz_size = (-(hmin)) + (hmax) + x_max;                   \
         while (global_horz_size % LOCAL_X) global_horz_size++;                  \
         size_t global_vert_size = (-(vmin)) + (vmax) + y_max;                   \
         while (global_vert_size % LOCAL_Y) global_vert_size++;                  \
+        size_t global_slic_size = (-(smin)) + (smax) + z_max;                   \
+        while (global_slic_size % LOCAL_Z) global_slic_size++;                  \
         launch_specs_t cur_specs;                                               \
-        cur_specs.global = cl::NDRange(global_horz_size, global_vert_size);     \
-        cur_specs.offset = cl::NDRange((x_min + 1) + (hmin), (y_min + 1) + (vmin)); \
+        cur_specs.global = cl::NDRange(global_horz_size, global_vert_size, global_slic_size);     \
+        cur_specs.offset = cl::NDRange((x_min + 1) + (hmin), (y_min + 1) + (vmin), (z_min + 1) + (smin)); \
         launch_specs[#knl"_device"] = cur_specs;                                \
     }
 
-    FIND_PADDING_SIZE(ideal_gas, 0, 0, 0, 0); 
-    FIND_PADDING_SIZE(accelerate, 0, 1, 0, 1); 
-    FIND_PADDING_SIZE(flux_calc_x, 0, 0, 1, 0); 
-    FIND_PADDING_SIZE(flux_calc_y, 0, 0, 0, 1); 
-    FIND_PADDING_SIZE(viscosity, 0, 0, 0, 0); 
-    FIND_PADDING_SIZE(revert, 0, 0, 0, 0); 
-    FIND_PADDING_SIZE(reset_field, 0, 1, 0, 1); 
-    FIND_PADDING_SIZE(set_field, 0, 1, 0, 1); 
-    FIND_PADDING_SIZE(field_summary, 0, 0, 0, 0);
-    FIND_PADDING_SIZE(calc_dt, 0, 0, 0, 0);
+    FIND_PADDING_SIZE(ideal_gas, 0, 0, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(accelerate, 0, 1, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(flux_calc_x, 0, 0, 1, 0, 0, 0); 
+    FIND_PADDING_SIZE(flux_calc_y, 0, 0, 0, 1, 0, 0); 
+    FIND_PADDING_SIZE(flux_calc_z, 0, 0, 0, 0, 0, 1); 
+    FIND_PADDING_SIZE(viscosity, 0, 0, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(revert, 0, 0, 0, 0,0, 0); 
+    FIND_PADDING_SIZE(reset_field, 0, 1, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(field_summary, 0, 0, 0, 0, 0, 0);
+    FIND_PADDING_SIZE(calc_dt, 0, 0, 0, 0, 0, 0);
 
-    FIND_PADDING_SIZE(advec_mom_vol, -2, 2, -2, 2); 
+    FIND_PADDING_SIZE(advec_mom_vol, -2, 2, -2, 2, -2, 2); 
 
-    FIND_PADDING_SIZE(advec_mom_node_flux_post_x_1, 0, 1, -2, 2); 
-    FIND_PADDING_SIZE(advec_mom_node_flux_post_x_2, 0, 1, -1, 2); 
-    FIND_PADDING_SIZE(advec_mom_node_pre_x, 0, 1, -1, 2); 
-    FIND_PADDING_SIZE(advec_mom_flux_x, 0, 1, -1, 1); 
-    FIND_PADDING_SIZE(advec_mom_xvel, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_node_flux_post_x_1, 0, 1, -2, 2, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_node_flux_post_x_2, 0, 1, -1, 2, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_node_pre_x, 0, 1, -1, 2, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_flux_x, 0, 1, -1, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_xvel, 0, 1, 0, 1, 0, 1); 
 
-    FIND_PADDING_SIZE(advec_mom_node_flux_post_y_1, -2, 2, 0, 1); 
-    FIND_PADDING_SIZE(advec_mom_node_flux_post_y_2, -1, 2, 0, 1); 
-    FIND_PADDING_SIZE(advec_mom_node_pre_y, -1, 2, 0, 1); 
-    FIND_PADDING_SIZE(advec_mom_flux_y, -1, 1, 0, 1); 
-    FIND_PADDING_SIZE(advec_mom_yvel, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_node_flux_post_y_1, -2, 2, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_node_flux_post_y_2, -1, 2, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_node_pre_y, -1, 2, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_flux_y, -1, 1, 0, 1, 0, 1); 
+    FIND_PADDING_SIZE(advec_mom_yvel, 0, 1, 0, 1, 0, 1); 
 
-    FIND_PADDING_SIZE(advec_cell_pre_vol_x, -2, 2, -2, 2); 
-    FIND_PADDING_SIZE(advec_cell_ener_flux_x, 0, 0, 0, 2); 
-    FIND_PADDING_SIZE(advec_cell_x, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(advec_mom_node_flux_post_z_1, 0, 1, 0, 1, -2, 2); 
+    FIND_PADDING_SIZE(advec_mom_node_flux_post_z_2, 0, 1, 0, 1, -1, 2); 
+    FIND_PADDING_SIZE(advec_mom_node_pre_z, 0, 1, 0, 1, -1, 2);
+    FIND_PADDING_SIZE(advec_mom_flux_z, 0, 1, 0, 1, -1, 1);
+    FIND_PADDING_SIZE(advec_mom_zvel, 0, 1, 0, 1, 0, 1); 
 
-    FIND_PADDING_SIZE(advec_cell_pre_vol_y, -2, 2, -2, 2); 
-    FIND_PADDING_SIZE(advec_cell_ener_flux_y, 0, 2, 0, 0); 
-    FIND_PADDING_SIZE(advec_cell_y, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(advec_cell_pre_vol_x, -2, 2, -2, 2, -2, 2); 
+    FIND_PADDING_SIZE(advec_cell_ener_flux_x, 0, 0, 0, 2, 0, 0); 
+    FIND_PADDING_SIZE(advec_cell_x, 0, 0, 0, 0, 0, 0); 
 
-    FIND_PADDING_SIZE(PdV_predict, 0, 0, 0, 0); 
-    FIND_PADDING_SIZE(PdV_not_predict, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(advec_cell_pre_vol_y, -2, 2, -2, 2, -2, 2); 
+    FIND_PADDING_SIZE(advec_cell_ener_flux_y, 0, 2, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(advec_cell_y, 0, 0, 0, 0, 0, 0); 
 
-    FIND_PADDING_SIZE(initialise_chunk_first, 0, 3, 0, 3);
-    FIND_PADDING_SIZE(initialise_chunk_second, -2, 2, -2, 2);
-    FIND_PADDING_SIZE(generate_chunk_init, -2, 2, -2, 2);
-    FIND_PADDING_SIZE(generate_chunk, -2, 2, -2, 2);
+    FIND_PADDING_SIZE(advec_cell_pre_vol_z, -2, 2, -2, 2, -2, 2); 
+    FIND_PADDING_SIZE(advec_cell_ener_flux_z, 0, 0, 0, 0, 0, 2); 
+    FIND_PADDING_SIZE(advec_cell_z, 0, 0, 0, 0, 0, 0); 
 
-    FIND_PADDING_SIZE(generate_chunk, -2, 2, -2, 2);
+    FIND_PADDING_SIZE(PdV_predict, 0, 0, 0, 0, 0, 0); 
+    FIND_PADDING_SIZE(PdV_not_predict, 0, 0, 0, 0, 0, 0); 
+
+    FIND_PADDING_SIZE(initialise_chunk_first, 0, 3, 0, 3, 0, 3);
+    FIND_PADDING_SIZE(initialise_chunk_second, -2, 2, -2, 2, -2, 2);
+    FIND_PADDING_SIZE(generate_chunk_init, -2, 2, -2, 2, -2, 2);
+    FIND_PADDING_SIZE(generate_chunk, -2, 2, -2, 2, -2, 2);
+
+    FIND_PADDING_SIZE(generate_chunk, -2, 2, -2, 2, -2, 2);
 }
 
 void CloverChunk::initArgs

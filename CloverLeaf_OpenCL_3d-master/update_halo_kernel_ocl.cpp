@@ -1,15 +1,6 @@
 #include "ocl_common.hpp"
 extern CloverChunk chunk;
 
-#define CHUNK_left 1
-#define CHUNK_right 2
-#define CHUNK_bottom 3
-#define CHUNK_top 4
-#define CHUNK_front 5
-#define CHUNK_back 6
-
-#define EXTERNAL_FACE (-1)
-
 // types of array data
 
 const static cell_info_t CELL(    0, 0,0, 1, 1,1, 0, 0,0, CELL_DATA);

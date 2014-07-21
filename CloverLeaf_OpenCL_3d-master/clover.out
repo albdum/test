@@ -29,6 +29,7 @@ Clover Version    1.100
  end_time=100.0                                                                                                                                       
  end_step=50                                                                                                                                          
                                                                                                                                                       
+ !step:      0  0.16000000E+04  0.90000000E+03  0.56250000E+00  0.55000000E+00  0.22000000E+04  0.00000000E+00  0.22000000E+04                        
  use_opencl_kernels                                                                                                                                   
  opencl_vendor=Nvidia                                                                                                                                 
  opencl_type=GPU                                                                                                                                      
@@ -91,7 +92,8 @@ Clover Version    1.100
  
  Time   0.000000000000000E+000
                        Volume            Mass         Density        Pressure Internal Energy  Kinetic Energy    Total Energy
- step:      0      0.2667E+02      0.3333E+01      0.1250E+00      0.1000E+00      0.6667E+01      0.0000E+00      0.6667E+01
+ step:      0  0.26666667E+02  0.33333333E+01  0.12500000E+00  0.10000000E+00  0.66666667E+01  0.00000000E+00  0.66666667E+01
+ step:      0  0.16000000E+04  0.90000000E+03  0.56250000E+00  0.55000001E+00  0.22000000E+04  0.00000000E+00  0.22000000E+04
  
  Starting the calculation
  Step       1 time   0.0000000 control    sound    timestep   0.00E+00       1,       1 x  5.00E-02 y  5.00E-02

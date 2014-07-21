@@ -40,7 +40,7 @@ __kernel void update_halo_top
     __kernel_indexes;
 
     // if x face data, offset source/dest by - 1
-    int x_f_offset = (x_face) ? 1 : 0;
+    int x_f_offset = (x_face || z_face);
   if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
   {
     if (column >= 2 - depth && column <= (x_max + 1) + x_extra + depth)
@@ -87,7 +87,7 @@ __kernel void update_halo_right
  __global double * __restrict const cur_array)
 {
     // offset source by -1 if its a y face
-    int y_f_offset = (y_face) ? 1 : 0;
+    int y_f_offset = (y_face || z_face);
 
     __kernel_indexes;
   if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
@@ -101,4 +101,45 @@ __kernel void update_halo_right
   }
 }
 
+__kernel void update_halo_back
+(int x_extra, int y_extra, int z_extra,
+ int x_invert, int y_invert, int z_invert,
+ int x_face, int y_face, int z_face,
+ int grid_type, int depth, 
+ __global double * __restrict const cur_array)
+{
+    // offset by 1 if it is anything but a CELL grid
+    int z_offset = (grid_type != CELL_DATA) ? 1 : 0;
+
+    __kernel_indexes;
+  if (column >= 2 - depth && column <= (x_max + 1) + x_extra + depth)
+  {
+    if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
+    {
+        cur_array[THARR3D(0, 0, 1 - (2 * slice), x_extra,y_extra)] =
+            z_invert * cur_array[THARR3D(0, 0, z_offset, x_extra,y_extra)];
+    }
+  }
+}
+
+__kernel void update_halo_front
+(int x_extra, int y_extra, int z_extra,
+ int x_invert, int y_invert, int z_invert,
+ int x_face, int y_face, int z_face,
+ int grid_type, int depth, 
+ __global double * __restrict const cur_array)
+{
+    __kernel_indexes;
+
+  int z_offset = (x_face || y_face);
+
+  if (column >= 2 - depth && column <= (x_max + 1) + x_extra + depth)
+  {
+    if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
+    {
+        cur_array[THARR3D(0, 0, z_max + 2 + z_extra, x_extra,y_extra)] =
+            z_invert * cur_array[THARR3D(0, 0, z_max + 2 + z_offset, x_extra,y_extra)];
+    }
+  }
+}
 

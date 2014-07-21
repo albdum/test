@@ -89,8 +89,8 @@ options << "-D NO_KERNEL_REDUCTIONS ";
     compileKernel(options_str, src_update_halo_cl, "update_halo_bottom", update_halo_bottom_device);
     compileKernel(options_str, src_update_halo_cl, "update_halo_left", update_halo_left_device);
     compileKernel(options_str, src_update_halo_cl, "update_halo_right", update_halo_right_device);
-//    compileKernel(options_str, src_update_halo_cl, "update_halo_back", update_halo_back_device);
-//    compileKernel(options_str, src_update_halo_cl, "update_halo_front", update_halo_front_device);
+    compileKernel(options_str, src_update_halo_cl, "update_halo_back", update_halo_back_device);
+    compileKernel(options_str, src_update_halo_cl, "update_halo_front", update_halo_front_device);
 
     compileKernel(options_str, src_advec_mom_cl, "advec_mom_vol", advec_mom_vol_device);
     compileKernel(options_str, src_advec_mom_cl, "advec_mom_node_flux_post_x_1", advec_mom_node_flux_post_x_1_device);
@@ -304,18 +304,16 @@ void CloverChunk::initSizes
     }
     fprintf(DBGOUT, "Local row work group size is %zu\n", local_row_size);
 
-    update_ud_local_size[0] = cl::NDRange(local_row_size, 1);
-    update_ud_local_size[1] = cl::NDRange(local_row_size, 2);
-    //update_ud_local_size[2] = cl::NDRange(local_row_size, 3);
+    update_ud_local_size[0] = cl::NDRange(local_row_size, 1, 1);
+    update_ud_local_size[1] = cl::NDRange(local_row_size, 2, 1);
 
     size_t global_row_size = local_row_size;
     while (global_row_size < x_max+5)
     {
         global_row_size += local_row_size;
     }
-    update_ud_global_size[0] = cl::NDRange(global_row_size, 1);
-    update_ud_global_size[1] = cl::NDRange(global_row_size, 2);
-    //update_ud_global_size[2] = cl::NDRange(global_row_size, 3);
+    update_ud_global_size[0] = cl::NDRange(global_row_size, 1, z_max+4);
+    update_ud_global_size[1] = cl::NDRange(global_row_size, 2, z_max+4);
 
     // same for column
     size_t local_column_size = y_max+5;
@@ -332,42 +330,23 @@ void CloverChunk::initSizes
 
     fprintf(DBGOUT, "Local column work group size is %zu\n", local_column_size);
 
-    update_lr_local_size[0] = cl::NDRange(1, local_column_size);
-    update_lr_local_size[1] = cl::NDRange(2, local_column_size);
-    //update_lr_local_size[2] = cl::NDRange(3, local_column_size);
+    update_lr_local_size[0] = cl::NDRange(1, local_column_size, 1);
+    update_lr_local_size[1] = cl::NDRange(2, local_column_size, 1);
 
     size_t global_column_size = local_column_size;
     while (global_column_size < y_max+5)
     {
         global_column_size += local_column_size;
     }
-    update_lr_global_size[0] = cl::NDRange(1, global_column_size);
-    update_lr_global_size[1] = cl::NDRange(2, global_column_size);
-    //update_lr_global_size[2] = cl::NDRange(3, global_column_size);
+    update_lr_global_size[0] = cl::NDRange(1, global_column_size, z_max+4);
+    update_lr_global_size[1] = cl::NDRange(2, global_column_size, z_max+4);
 
+    update_fb_local_size[0] = cl::NDRange(local_row_size, 1, 1);
+    update_fb_local_size[1] = cl::NDRange(local_row_size, 1, 2);
 
-    // same for slice
-/*
-    size_t local_slice_size = z_max+5;
-    while (local_slice_size > max_update_wg_sz/2)
-    {
-        local_slice_size = local_slice_size/2;
-    }
-    fprintf(DBGOUT, "Local row work group size is %zu\n", local_slice_size);
-
-    update_ud_slice_size[0] = cl::NDRange(local_slice_size, 1);
-    update_ud_slice_size[1] = cl::NDRange(local_slice_size, 2);
-    update_ud_slice_size[2] = cl::NDRange(local_slice_size, 3);
-
-    size_t global_slice_size = local_slice_size;
-    while (global_slice_size < z_max+5)
-    {
-        global_slice_size += local_slice_size;
-    }
-    update_ud_global_size[0] = cl::NDRange(global_slice_size, 1);
-    update_ud_global_size[1] = cl::NDRange(global_slice_size, 2);
-    update_ud_global_size[2] = cl::NDRange(global_slice_size, 3);
-*/
+    update_fb_global_size[0] = cl::NDRange(global_row_size, global_column_size, 1);
+    update_fb_global_size[1] = cl::NDRange(global_row_size, global_column_size, 2);
+    // TODO move into function
 
     fprintf(DBGOUT, "Update halo parameters calculated\n");
 

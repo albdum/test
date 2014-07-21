@@ -151,8 +151,8 @@ private:
     cl::Kernel update_halo_bottom_device;
     cl::Kernel update_halo_left_device;
     cl::Kernel update_halo_right_device;
-    //cl::Kernel update_halo_back_device;
-    //cl::Kernel update_halo_front_device;
+    cl::Kernel update_halo_back_device;
+    cl::Kernel update_halo_front_device;
 
 
     // specific sizes and launch offsets for different kernels
@@ -249,8 +249,10 @@ private:
     // sizes for launching update halo kernels - l/r and u/d updates
     cl::NDRange update_lr_global_size[2];
     cl::NDRange update_ud_global_size[2];
+    cl::NDRange update_fb_global_size[2];
     cl::NDRange update_lr_local_size[2];
     cl::NDRange update_ud_local_size[2];
+    cl::NDRange update_fb_local_size[2];
 
     // values used to control operation
     size_t x_min;

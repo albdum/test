@@ -597,11 +597,11 @@ void CloverChunk::initArgs
         knl.setArg(1, volume);          \
         knl.setArg(2, vol_flux_x);      \
         knl.setArg(3, vol_flux_y);      \
-        knl.setArg(3, vol_flux_z);      \
-        knl.setArg(4, work_array_2);    \
-        knl.setArg(5, density1);        \
-        knl.setArg(6, energy1);         \
-        knl.setArg(7, work_array_1);
+        knl.setArg(4, vol_flux_z);      \
+        knl.setArg(5, work_array_2);    \
+        knl.setArg(6, density1);        \
+        knl.setArg(7, energy1);         \
+        knl.setArg(8, work_array_1);
 
     // x kernels
     advec_cell_pre_vol_x_device.setArg(1, work_array_2);

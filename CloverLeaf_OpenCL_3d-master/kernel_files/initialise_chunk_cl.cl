@@ -65,20 +65,20 @@ __kernel void initialise_chunk_second
     __kernel_indexes;
 
     //fill x arrays
-    if (row == 0 && column <= (x_max + 1) + 2 && slice <= (z_max + 1) + 2)
+    if (row == 0 && column <= (x_max + 1) + 2 && slice == 0)
     {
         cellx[column] = 0.5 * (vertexx[column] + vertexx[column + 1]);
         celldx[column] = d_dx;
     }
 
     //fill y arrays
-    if (column == 0 && row <= (y_max + 1) + 2 && slice <= (z_max + 1) + 2)
+    if (column == 0 && row <= (y_max + 1) + 2 && slice == 0)
     {
         celly[row] = 0.5 * (vertexy[row] + vertexy[row + 1]);
         celldy[row] = d_dy;
     }
     //fill z arrays
-    if (slice == 0 && row <= (y_max + 1) + 2 && column <= (x_max + 1) + 2)
+    if (row == 0 && slice <= (z_max + 1) + 2 && column == 0)
     {
         cellz[slice] = 0.5 * (vertexz[slice] + vertexz[slice + 1]);
         celldz[slice] = d_dz;

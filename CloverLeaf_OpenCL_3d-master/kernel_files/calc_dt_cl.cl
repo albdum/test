@@ -29,14 +29,9 @@ __kernel void calc_dt
 
     double dsx, dsy,dsz;
     double cc;
-    double dtct;
     double div;
     double dv1;
     double dv2;
-    double dtut;
-    double dtvt;
-    double dtwt;
-    double dtdivt;
 
     //reduced
     double dt_min_val = g_big;
@@ -59,7 +54,7 @@ __kernel void calc_dt
         cc += 2.0 * viscosity[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)];
         cc = MAX(SQRT(cc), g_small);
 
-        dtct = dtc_safe * MIN(dsx, MIN(dsy,dsz))/cc;
+        const double dtct = dtc_safe * MIN(dsx, MIN(dsy,dsz))/cc;
 
         div = 0.0;
 
@@ -70,7 +65,7 @@ __kernel void calc_dt
 
         div += dv2 - dv1;
 
-        dtut = dtu_safe * 2.0 * volume[THARR3D(0, 0, 0,0,0)]
+        const double dtut = dtu_safe * 2.0 * volume[THARR3D(0, 0, 0,0,0)]
             / MAX(g_small*volume[THARR3D(0, 0, 0,0,0)],
             MAX(fabs(dv1), fabs(dv2)));
 
@@ -81,7 +76,7 @@ __kernel void calc_dt
 
         div += dv2 - dv1;
 
-        dtvt = dtv_safe * 2.0 * volume[THARR3D(0, 0, 0,0,0)]
+        const double dtvt = dtv_safe * 2.0 * volume[THARR3D(0, 0, 0,0,0)]
             / MAX(g_small*volume[THARR3D(0, 0, 0,0,0)],
             MAX(fabs(dv1), fabs(dv2)));
 
@@ -92,7 +87,7 @@ __kernel void calc_dt
 
         div += dv2 - dv1;
 
-        dtwt = dtw_safe * 2.0 * volume[THARR3D(0, 0, 0,0,0)]
+        const double dtwt = dtw_safe * 2.0 * volume[THARR3D(0, 0, 0,0,0)]
             / MAX(g_small*volume[THARR3D(0, 0, 0,0,0)],
             MAX(fabs(dv1), fabs(dv2)));
 
@@ -100,7 +95,7 @@ __kernel void calc_dt
         //
         div /= (2.0 * volume[THARR3D(0, 0, 0,0,0)]);
 
-        dtdivt = (div < (-g_small)) ? dtdiv_safe * (-1.0/div) : g_big;
+        const double dtdivt = (div < (-g_small)) ? dtdiv_safe * (-1.0/div) : g_big;
 
         dt_min_shared[lid] = MIN(dtdivt, MIN(dtvt, MIN(dtct, MIN(dtut,dtwt))));
 //THIS NEEDS FIXING

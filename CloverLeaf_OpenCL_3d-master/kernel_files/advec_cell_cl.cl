@@ -44,7 +44,7 @@ __kernel void advec_cell_pre_vol_x
 __kernel void advec_cell_ener_flux_x
 (_SHARED_KERNEL_ARGS_,
  __global const double* __restrict const vertexdx,
- __global double* __restrict const mass_flux_x)
+ __global       double* __restrict const mass_flux_x)
 {
     __kernel_indexes;
 

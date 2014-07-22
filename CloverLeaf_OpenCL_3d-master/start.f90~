@@ -52,7 +52,7 @@ SUBROUTINE start
 
   CALL clover_barrier
 
-  CALL clover_get_num_chunks(chunks_per_task)
+  !CALL clover_get_num_chunks(chunks_per_task)
   chunks_per_task=1
   ALLOCATE(chunks(1:chunks_per_task))
 

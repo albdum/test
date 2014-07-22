@@ -50,6 +50,7 @@ __kernel void field_summary
                         +zvel0[THARR3D(1, 1,0, 1,1)] * zvel0[THARR3D(1, 1,0, 1,1)]);
 
 	//for z
+
         vsqrd += 0.125 *(xvel0[THARR3D(0, 0,1, 1,1)] * xvel0[THARR3D(0, 0,1, 1,1)]
                         +yvel0[THARR3D(0, 0,1, 1,1)] * yvel0[THARR3D(0, 0,1, 1,1)]
                         +zvel0[THARR3D(0, 0,1, 1,1)] * zvel0[THARR3D(0, 0,1, 1,1)]);

@@ -41,7 +41,7 @@ SUBROUTINE timestep()
   INTEGER :: jldt,kldt,lldt
 
   REAL(KIND=8)    :: dtlp
-  REAL(KIND=8)    :: x_pos,y_pos,xl_pos,yl_pos,zl_pos
+  REAL(KIND=8)    :: x_pos,y_pos,z_pos,xl_pos,yl_pos,zl_pos
 
   REAL(KIND=8)    :: kernel_time,timer
 
@@ -91,12 +91,13 @@ SUBROUTINE timestep()
       dt_control=dtl_control
       x_pos=xl_pos
       y_pos=yl_pos
+      z_pos=zl_pos
       jdt=jldt
       kdt=kldt
     ENDIF
   END DO
 
-  dt = MIN(dt, (dtold * dtrise), dtmax)
+  dt = MIN(dt, MIN((dtold * dtrise), dtmax))
 
   CALL clover_min(dt)
   IF(profiler_on) profiler%timestep=profiler%timestep+(timer()-kernel_time)
@@ -113,7 +114,7 @@ SUBROUTINE timestep()
   ENDIF
 
   IF(small.EQ.1) THEN
-    !CALL report_error('timestep','small timestep')
+    CALL report_error('timestep','small timestep')
   ENDIF
 
   dtold = dt

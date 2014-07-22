@@ -61,7 +61,7 @@ __kernel void PdV_predict
 	volume_change=volume[THARR3D(0,0,0,0,0)]/(volume[THARR3D(0,0,0,0,0)]+total_flux);
 
         //minimum of total, horizontal, and vertical flux
-	//Maybe this is wrong?
+
 	min_cell_volume=MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux
 		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux
 		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux
@@ -78,8 +78,8 @@ __kernel void PdV_predict
 
         recip_volume = 1.0/volume[THARR3D(0, 0, 0,0,0)];
 
-        energy_change = ((pressure[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)])
-            + (viscosity[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)]))
+        energy_change = (pressure[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)]
+            + viscosity[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)])
             * total_flux * recip_volume;
 
         energy1[THARR3D(0, 0, 0,0,0)] = energy0[THARR3D(0, 0, 0,0,0)] - energy_change;
@@ -150,7 +150,7 @@ __kernel void PdV_not_predict
 	volume_change=volume[THARR3D(0,0,0,0,0)]/(volume[THARR3D(0,0,0,0,0)]+total_flux);
 
         //minimum of total, horizontal, and vertical flux
-	//Maybe this is wrong?
+
 	min_cell_volume=MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux+front_flux-back_flux
 		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux+top_flux-bottom_flux
 		,MIN(volume[THARR3D(0,0,0,0,0)]+right_flux-left_flux
@@ -167,8 +167,8 @@ __kernel void PdV_not_predict
 
         recip_volume = 1.0/volume[THARR3D(0, 0, 0,0,0)];
 
-        energy_change = ((pressure[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)])
-            + (viscosity[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)]))
+        energy_change = (pressure[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)]
+            + viscosity[THARR3D(0, 0, 0,0,0)] / density0[THARR3D(0, 0, 0,0,0)])
             * total_flux * recip_volume;
 
         energy1[THARR3D(0, 0, 0,0,0)] = energy0[THARR3D(0, 0, 0,0,0)] - energy_change;

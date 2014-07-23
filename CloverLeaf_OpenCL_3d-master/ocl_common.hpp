@@ -373,7 +373,7 @@ public:
 
     void flux_calc_kernel(double dbyt);
 
-    void advec_cell_kernel(int dr, int swp_nmbr);
+    void advec_cell_kernel(int dr, int swp_nmbr,int advec_int);
 
     void revert_kernel();
 

@@ -77,6 +77,7 @@ __kernel void advec_cell_ener_flux_x
             // tries to get from below, unless it would be reading from a cell
             // which would be off the right, in which case read from cur cell
             upwind = (column == (x_max + 1) + 2) ? 0 : 1;
+            //upwind = MIN(1,x_max+1+2);
             donor = 0;
             downwind = -1;
             dif = upwind;
@@ -171,7 +172,8 @@ __kernel void advec_cell_pre_vol_y
  __global const double* __restrict const volume,
  __global const double* __restrict const vol_flux_x,
  __global const double* __restrict const vol_flux_y,
- __global const double* __restrict const vol_flux_z)
+ __global const double* __restrict const vol_flux_z,
+int advect_int)
 {
     __kernel_indexes;
 
@@ -179,24 +181,27 @@ __kernel void advec_cell_pre_vol_y
     && /*column >= (x_min + 1) - 2 &&*/ column <= (x_max + 1) + 2
     && /*slice >= (z_min + 1) - 2 &&*/ slice <= (z_max + 1) + 2)
     {
-        if(swp_nmbr == 2)
+      if(swp_nmbr == 2)
         {
+	  if(advect_int==1)
+	  {
             pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
                 +(vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]
                 + vol_flux_x[THARR3D(1, 0, 0,1,0)] - vol_flux_x[THARR3D(0, 0, 0,1,0)]);
 
             post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
                 - (vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]);
-        }
-        else
-        {
+          }
+          else
+          {
             pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
                 +(vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]
                 + vol_flux_z[THARR3D(0, 0, 1,0,0)] - vol_flux_z[THARR3D(0, 0, 0,1,0)]);
 
             post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
                 - (vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]);
-        }
+          }
+	}
     }
 }
 
@@ -237,6 +242,7 @@ __kernel void advec_cell_ener_flux_y
             // which would be off the bottom, in which case read from cur cell
             //
             upwind = (row == (y_max + 1) + 2) ? 0 : 1;
+            //upwind = MIN(1,y_max+1+2);
             donor = 0;
             downwind = -1;
             dif = upwind;
@@ -348,7 +354,7 @@ __kernel void advec_cell_pre_vol_z
             post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
                 - (vol_flux_z[THARR3D(0, 0, 1,0,0)] - vol_flux_z[THARR3D(0, 0, 0,0,0)]);
         }
-        else
+        else if (swp_nmbr == 3)
         {
             pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
                 + vol_flux_z[THARR3D(0, 0, 1,0,0)] - vol_flux_z[THARR3D(0, 0, 0,0,0)];
@@ -395,6 +401,7 @@ __kernel void advec_cell_ener_flux_z
             // which would be off the bottom, in which case read from cur cell
             //
             upwind = (slice == (z_max + 1) + 2) ? 0 : 1;
+            //upwind = MIN(1,z_max+1+2);
             donor = 0;
             downwind = -1;
             dif = upwind;

@@ -1,13 +1,13 @@
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 #define __kernel_indexes                            \
-    const size_t column = get_global_id(0);			\
-    const size_t row = get_global_id(1);	\
-    const size_t slice = get_global_id(2);			\
-    const size_t loc_column = get_local_id(0);			\
-    const size_t loc_row = get_local_id(1);			\
-    const size_t loc_slice = get_local_id(2);			\
-    const size_t lid = loc_slice*LOCAL_X*LOCAL_Y + loc_row*LOCAL_X + loc_column;	\
+    const size_t column = get_global_id(0);            \
+    const size_t row = get_global_id(1);    \
+    const size_t slice = get_global_id(2);            \
+    const size_t loc_column = get_local_id(0);            \
+    const size_t loc_row = get_local_id(1);            \
+    const size_t loc_slice = get_local_id(2);            \
+    const size_t lid = loc_slice*LOCAL_X*LOCAL_Y + loc_row*LOCAL_X + loc_column;    \
     const size_t gid = slice*get_global_size(1)*get_global_size(0) + row*get_global_size(0) + column;
 
 #define THARR2D(x_offset, y_offset, big_row)        \
@@ -21,12 +21,12 @@
 
 #define THARR3D(x_offset, y_offset,z_offset, big_row,big_col) \
     (                                                         \
-	(slice+z_offset)*(x_max+4+big_row)*(y_max+4+big_col)  \
-	+       (column                      /* horizontal  */ \
-    		+ row*(x_max + 4)             /* vertical    */ \
-    		+ (x_offset)                  /* horz offset */ \
-    		+ (y_offset)*(x_max + 4)      /* vert offset */ \
-    		+ (big_row)*(row + (y_offset)))/* big row   */   \
+    (slice+z_offset)*(x_max+4+big_row)*(y_max+4+big_col)  \
+    +       (column                      /* horizontal  */ \
+            + row*(x_max + 4)             /* vertical    */ \
+            + (x_offset)                  /* horz offset */ \
+            + (y_offset)*(x_max + 4)      /* vert offset */ \
+            + (big_row)*(row + (y_offset)))/* big row   */   \
     )
 
 #ifdef CLOVER_NO_BUILTINS

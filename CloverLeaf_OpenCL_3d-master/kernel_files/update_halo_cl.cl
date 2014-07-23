@@ -49,8 +49,8 @@ __kernel void update_halo_top
         {
             const int offset = (- row) * 2 - 1 - x_f_offset;
 
-            cur_array[THARR3D(0, y_extra + y_max + 2,0, x_extra,y_extra)] =
-                y_invert * cur_array[THARR3D(0, y_max + 2 + offset,0, x_extra,y_extra)];
+            cur_array[THARR3D(0, y_extra + (y_max + 2),0, x_extra,y_extra)] =
+                y_invert * cur_array[THARR3D(0, (y_max + 2) + offset,0, x_extra,y_extra)];
         }
     }
   }
@@ -69,12 +69,15 @@ __kernel void update_halo_left
     __kernel_indexes;
   if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
   {
+    if (column < depth)
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
         // first in row
-        const int row_begin = row * (x_max + 4 + x_extra);
+        const int row_begin = row * (x_max + 4 + x_extra) +
+            (slice)*(x_max+4+x_extra)*(y_max+4+y_extra);
 
-        cur_array[row_begin + (1 - column)] = x_invert * cur_array[row_begin + 2 + column + l_offset];
+        cur_array[row_begin + (1 - column)] =
+            x_invert * cur_array[row_begin + 2 + column + l_offset];
     }
   }
 }
@@ -92,11 +95,14 @@ __kernel void update_halo_right
     __kernel_indexes;
   if (slice >= 2 - depth && slice <= (z_max + 1) + z_extra + depth)
   {
+    if (column < depth)
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
-        const int row_begin = row * (x_max + 4 + x_extra);
+        const int row_begin = row * (x_max + 4 + x_extra) +
+            (slice)*(x_max+4+x_extra)*(y_max+4+y_extra);
 
-        cur_array[row_begin + x_max + 2 + x_extra + column] = x_invert * cur_array[row_begin + x_max + 1 - (column + y_f_offset)];
+        cur_array[row_begin + x_max + 2 + x_extra + column] =
+            x_invert * cur_array[row_begin + x_max + 1 - (column + y_f_offset)];
     }
   }
 }
@@ -138,7 +144,7 @@ __kernel void update_halo_front
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
         cur_array[THARR3D(0, 0, z_max + 2 + z_extra, x_extra,y_extra)] =
-            z_invert * cur_array[THARR3D(0, 0, z_max + 2 + z_offset, x_extra,y_extra)];
+            z_invert * cur_array[THARR3D(0, 0, z_max + 2 - z_offset, x_extra,y_extra)];
     }
   }
 }

@@ -82,7 +82,7 @@ __kernel void advec_cell_ener_flux_x
             dif = upwind;
         }
 
-        sigmat = fabs(vol_flux_x[THARR3D(0, 0, 1,1,0)]) / pre_vol[THARR3D(donor, 0, 1,1,1)];
+        sigmat = fabs(vol_flux_x[THARR3D(0, 0, 0,1,0)]) / pre_vol[THARR3D(donor, 0, 0,1,1)];
         sigma3 = (1.0 + sigmat) * (vertexdx[column] / vertexdx[column + dif]);
         sigma4 = 2.0 - sigmat;
 
@@ -100,11 +100,11 @@ __kernel void advec_cell_ener_flux_x
             limiter = 0.0;
         }
 
-        mass_flux_x[THARR3D(0, 0, 1,1,0)] = vol_flux_x[THARR3D(0, 0, 1,1,0)]
+        mass_flux_x[THARR3D(0, 0, 0,1,0)] = vol_flux_x[THARR3D(0, 0, 0,1,0)]
             * (density1[THARR3D(donor, 0, 0,0,0)] + limiter);
 
-        sigmam = fabs(mass_flux_x[THARR3D(0, 0, 1,1,0)])
-            / (density1[THARR3D(donor, 0, 0,0,0)] * pre_vol[THARR3D(donor, 0, 1,1,1)]);
+        sigmam = fabs(mass_flux_x[THARR3D(0, 0, 0,1,0)])
+            / (density1[THARR3D(donor, 0, 0,0,0)] * pre_vol[THARR3D(donor, 0, 0,1,1)]);
         diffuw = energy1[THARR3D(donor, 0, 0,0,0)] - energy1[THARR3D(upwind, 0, 0,0,0)];
         diffdw = energy1[THARR3D(downwind, 0, 0,0,0)] - energy1[THARR3D(donor, 0, 0,0,0)];
 
@@ -119,7 +119,7 @@ __kernel void advec_cell_ener_flux_x
             limiter = 0.0;
         }
 
-        ener_flux[THARR3D(0, 0, 0,1,1)] = mass_flux_x[THARR3D(0, 0, 1,1,0)]
+        ener_flux[THARR3D(0, 0, 0,1,1)] = mass_flux_x[THARR3D(0, 0, 0,1,0)]
             * (energy1[THARR3D(donor, 0, 0,0,0)] + limiter);
     }
 }
@@ -144,17 +144,17 @@ __kernel void advec_cell_x
     && /*column >= (x_min + 1) &&*/ column <= (x_max + 1)
     && /*slice >= (z_min + 1) &&*/ slice <= (z_max + 1))
     {
-        pre_mass = density1[THARR3D(0, 0, 0,0,0)] * pre_vol[THARR3D(0, 0, 1,1,1)];
+        pre_mass = density1[THARR3D(0, 0, 0,0,0)] * pre_vol[THARR3D(0, 0, 0,1,1)];
 
-        post_mass = pre_mass + mass_flux_x[THARR3D(0, 0, 1,1,0)]
-            - mass_flux_x[THARR3D(1, 0, 1,1,0)];
+        post_mass = pre_mass + mass_flux_x[THARR3D(0, 0, 0,1,0)]
+            - mass_flux_x[THARR3D(1, 0, 0,1,0)];
 
         post_ener = (energy1[THARR3D(0, 0, 0,0,0)] * pre_mass
             + ener_flux[THARR3D(0, 0, 0,1,1)] - ener_flux[THARR3D(1, 0, 0,1,1)])
             / post_mass;
 
-        advec_vol = pre_vol[THARR3D(0, 0, 1,1,1)] + vol_flux_x[THARR3D(0, 0, 1,1,0)]
-            - vol_flux_x[THARR3D(1, 0, 1,1,0)];
+        advec_vol = pre_vol[THARR3D(0, 0, 0,1,1)] + vol_flux_x[THARR3D(0, 0, 0,1,0)]
+            - vol_flux_x[THARR3D(1, 0, 0,1,0)];
 
         density1[THARR3D(0, 0, 0,0,0)] = post_mass / advec_vol;
         energy1[THARR3D(0, 0, 0,0,0)] = post_ener;
@@ -242,7 +242,7 @@ __kernel void advec_cell_ener_flux_y
             dif = upwind;
         }
 
-        sigmat = fabs(vol_flux_y[THARR3D(0, 0, 0,0,1)]) / pre_vol[THARR3D(0, donor, 1,1,1)];
+        sigmat = fabs(vol_flux_y[THARR3D(0, 0, 0,0,1)]) / pre_vol[THARR3D(0, donor, 0,1,1)];
         sigma3 = (1.0 + sigmat) * (vertexdy[row] / vertexdy[row + dif]);
         sigma4 = 2.0 - sigmat;
 
@@ -351,7 +351,7 @@ __kernel void advec_cell_pre_vol_z
         else
         {
             pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
-                + vol_flux_z[THARR3D(0, 0, 1,0,0)] - vol_flux_z[THARR3D(0, 0, 0,1,0)];
+                + vol_flux_z[THARR3D(0, 0, 1,0,0)] - vol_flux_z[THARR3D(0, 0, 0,0,0)];
 
             post_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)];
         }
@@ -431,13 +431,14 @@ __kernel void advec_cell_ener_flux_z
             limiter = (1.0 - sigmam) * SIGN(1.0, diffdw)
                 * MIN(fabs(diffuw), MIN(fabs(diffdw), one_by_six
                 * (sigma3 * fabs(diffuw) + sigma4 * fabs(diffdw))));
+
         }
         else
         {
             limiter = 0.0;
         }
 
-        ener_flux[THARR3D(0, 0, 0,1,1)] = mass_flux_z[THARR3D(0, 0, 0,0,1)]
+        ener_flux[THARR3D(0, 0, 0,1,1)] = mass_flux_z[THARR3D(0, 0, 0,0,0)]
             * (energy1[THARR3D(0,0, donor,0,0)] + limiter);
     }
 }

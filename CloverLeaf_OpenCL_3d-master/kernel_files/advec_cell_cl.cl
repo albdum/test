@@ -65,7 +65,7 @@ __kernel void advec_cell_ener_flux_x
     && /*slice >= (z_min + 1) &&*/ column <= (z_max + 1))
     {
         // if flowing right
-        if(vol_flux_x[THARR3D(0, 0, 1,1,0)] > 0.0)
+        if(vol_flux_x[THARR3D(0, 0, 0,1,0)] > 0.0)
         {
             upwind = -2;
             donor = -1;
@@ -181,27 +181,27 @@ int advect_int)
     && /*column >= (x_min + 1) - 2 &&*/ column <= (x_max + 1) + 2
     && /*slice >= (z_min + 1) - 2 &&*/ slice <= (z_max + 1) + 2)
     {
-      if(swp_nmbr == 2)
+        if(swp_nmbr == 2)
         {
-	  if(advect_int==1)
-	  {
-            pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
+            if(advect_int==1)
+            {
+                pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
                 +(vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]
                 + vol_flux_x[THARR3D(1, 0, 0,1,0)] - vol_flux_x[THARR3D(0, 0, 0,1,0)]);
 
-            post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
+                post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
                 - (vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]);
-          }
-          else
-          {
-            pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
+            }
+            else
+            {
+                pre_vol[THARR3D(0, 0, 0,1,1)] = volume[THARR3D(0, 0, 0,0,0)]
                 +(vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]
                 + vol_flux_z[THARR3D(0, 0, 1,0,0)] - vol_flux_z[THARR3D(0, 0, 0,0,0)]);
 
-            post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
+                post_vol[THARR3D(0, 0, 0,1,1)] = pre_vol[THARR3D(0, 0, 0,1,1)]
                 - (vol_flux_y[THARR3D(0, 1, 0,0,1)] - vol_flux_y[THARR3D(0, 0, 0,0,1)]);
-          }
-	}
+            }
+        }
     }
 }
 

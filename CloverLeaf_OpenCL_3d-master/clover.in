@@ -18,7 +18,7 @@
  y_cells=100
  z_cells=100
  end_time=100.0
- end_step=1
+ end_step=100
 
  use_opencl_kernels
  opencl_vendor=Nvidia

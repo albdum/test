@@ -236,7 +236,7 @@ include make.deps
 %.mod %_module.mod %_leaf_module.mod: %.f90 %.o
 	@true
 %.o: %.f90 Makefile
-	$(MPI_COMPILER) $(CFLAGS) -c $< -o $*.o
+	$(MPI_COMPILER) -cpp $(CFLAGS) -c $< -o $*.o
 %.o: %.c Makefile
 	$(C_MPI_COMPILER) $(CFLAGS) -c $< -o $*.o
 

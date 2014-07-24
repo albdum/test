@@ -302,8 +302,8 @@ void CloverChunk::initSizes
     {
         global_row_size += local_row_size;
     }
-    update_ud_global_size[0] = cl::NDRange(global_row_size, 1, z_max+4);
-    update_ud_global_size[1] = cl::NDRange(global_row_size, 2, z_max+4);
+    update_ud_global_size[0] = cl::NDRange(global_row_size, 1, z_max+5);
+    update_ud_global_size[1] = cl::NDRange(global_row_size, 2, z_max+5);
 
     // same for column
     size_t local_column_size = y_max+5;
@@ -328,9 +328,10 @@ void CloverChunk::initSizes
     {
         global_column_size += local_column_size;
     }
-    update_lr_global_size[0] = cl::NDRange(1, global_column_size, z_max+4);
-    update_lr_global_size[1] = cl::NDRange(2, global_column_size, z_max+4);
+    update_lr_global_size[0] = cl::NDRange(1, global_column_size, z_max+5);
+    update_lr_global_size[1] = cl::NDRange(2, global_column_size, z_max+5);
 
+    // front and back
     update_fb_local_size[0] = cl::NDRange(local_row_size, 1, 1);
     update_fb_local_size[1] = cl::NDRange(local_row_size, 1, 2);
 

@@ -18,13 +18,12 @@
  y_cells=100
  z_cells=100
  end_time=100.0
- end_step=5
+ end_step=1
 
- !step:      0  0.16000000E+04  0.90000000E+03  0.56250000E+00  0.55000000E+00  0.22000000E+04  0.00000000E+00  0.22000000E+04
  use_opencl_kernels
  opencl_vendor=Nvidia
  opencl_type=GPU
  !NO_KERNEL_REDUCTIONS
- profiler_on=1
+ !profiler_on=1
 
 *endclover

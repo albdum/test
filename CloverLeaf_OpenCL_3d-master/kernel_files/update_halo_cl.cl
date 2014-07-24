@@ -74,7 +74,7 @@ __kernel void update_halo_left
     {
         // first in row
         const int row_begin = row * (x_max + 4 + x_extra) +
-            (slice)*(x_max+4+x_extra)*(y_max+4+y_extra);
+            (slice)*(x_max + 4 + x_extra)*(y_max + 4 + y_extra);
 
         cur_array[row_begin + (1 - column)] =
             x_invert * cur_array[row_begin + 2 + column + l_offset];
@@ -99,7 +99,7 @@ __kernel void update_halo_right
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
         const int row_begin = row * (x_max + 4 + x_extra) +
-            (slice)*(x_max+4+x_extra)*(y_max+4+y_extra);
+            (slice)*(x_max + 4 + x_extra)*(y_max + 4 + y_extra);
 
         cur_array[row_begin + x_max + 2 + x_extra + column] =
             x_invert * cur_array[row_begin + x_max + 1 - (column + y_f_offset)];
@@ -123,7 +123,7 @@ __kernel void update_halo_back
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
         cur_array[THARR3D(0, 0, 1 - (2 * slice), x_extra,y_extra)] =
-            z_invert * cur_array[THARR3D(0, 0, z_offset, x_extra,y_extra)];
+            z_invert * cur_array[THARR3D(0, 0, 2 + z_offset, x_extra,y_extra)];
     }
   }
 }
@@ -143,8 +143,10 @@ __kernel void update_halo_front
   {
     if (row >= 2 - depth && row <= (y_max + 1) + y_extra + depth)
     {
-        cur_array[THARR3D(0, 0, z_max + 2 + z_extra, x_extra,y_extra)] =
-            z_invert * cur_array[THARR3D(0, 0, z_max + 2 - z_offset, x_extra,y_extra)];
+        const int offset = (- slice) * 2 - 1 - z_offset;
+
+        cur_array[THARR3D(0, 0, (z_max + 2) + z_extra, x_extra,y_extra)] =
+            z_invert * cur_array[THARR3D(0, 0, (z_max + 2) + offset, x_extra,y_extra)];
     }
   }
 }

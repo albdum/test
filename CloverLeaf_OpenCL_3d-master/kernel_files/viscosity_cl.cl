@@ -27,13 +27,15 @@ __kernel void viscosity
         wgrad=0.5*((zvel0[THARR3D(0 ,0 ,1,1,1)]+zvel0[THARR3D(1,1,1,1,1)]+zvel0[THARR3D(0 ,0 ,1,1,1)]+zvel0[THARR3D(1,1,1,1,1)])
 		-(zvel0[THARR3D(0 ,0,0,1,1 )]+zvel0[THARR3D(1,0 ,0,1,1 )]+zvel0[THARR3D(0 ,1,0,1,1 )]+zvel0[THARR3D(1,1,0,1,1 )]));
 
-        div = (celldx[column]*(ugrad)+  celldy[row]*(vgrad))+ celldz[slice]*(wgrad);
+        div = (celldy[row]*celldz[slice])   *ugrad +
+              (celldx[column]*celldz[slice])*vgrad +
+              (celldy[row]*celldx[column])  *wgrad;
 
 //Double check that (celldy[row]*celldz[slice])==yarea, etc
 
         strain2 = 0.5*(xvel0[THARR3D(0, 1,0,1,1 )] + xvel0[THARR3D(1,1,1,1,1)]-xvel0[THARR3D(0 ,0 ,0,1,1)]-xvel0[THARR3D(1,0 ,0,1,1 )])/(celldy[row]*celldz[slice])
-		+ 0.5*(yvel0[THARR3D(1,0 ,0,1,1 )] + yvel0[THARR3D(1,1,1,1,1)]-yvel0[THARR3D(0 ,0 ,0,1,1)]-yvel0[THARR3D(0 ,1,0,1,1 )])/(celldx[column]*celldz[slice])
-		+ 0.5*(zvel0[THARR3D(0 ,0 ,1,1,1)] + zvel0[THARR3D(1,1,1,1,1)]-zvel0[THARR3D(0 ,0 ,0,1,1)]-zvel0[THARR3D(0 ,0 ,1,1,1)])/(celldy[row]*celldx[column]);
+                + 0.5*(yvel0[THARR3D(1,0 ,0,1,1 )] + yvel0[THARR3D(1,1,1,1,1)]-yvel0[THARR3D(0 ,0 ,0,1,1)]-yvel0[THARR3D(0 ,1,0,1,1 )])/(celldx[column]*celldz[slice])
+                + 0.5*(zvel0[THARR3D(0 ,0 ,1,1,1)] + zvel0[THARR3D(1,1,1,1,1)]-zvel0[THARR3D(0 ,0 ,0,1,1)]-zvel0[THARR3D(0 ,0 ,1,1,1)])/(celldy[row]*celldx[column]);
 
 
         pgradx = (pressure[THARR3D(1, 0, 0,0,0)] - pressure[THARR3D(-1, 0, 0,0,0)])
@@ -48,7 +50,7 @@ __kernel void viscosity
 
         limiter = ((0.5*(ugrad)/celldx[column])*pgradx2
 		+ (0.5*(vgrad)/celldy[row])*pgrady2
-		+(0.5*(wgrad)/celldz[slice])*pgradz2
+		+ (0.5*(wgrad)/celldz[slice])*pgradz2
 		+strain2*pgradx*pgrady*pgradz)
 		/ MAX(pgradx2+pgrady2+pgradz2,1.0e-16);
 

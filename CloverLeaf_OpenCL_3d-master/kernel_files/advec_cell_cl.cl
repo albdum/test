@@ -62,7 +62,7 @@ __kernel void advec_cell_ener_flux_x
     //
     if(/*row >= (y_min + 1) &&*/ row <= (y_max + 1)
     && /*column >= (x_min + 1) &&*/ column <= (x_max + 1) + 2
-    && /*slice >= (z_min + 1) &&*/ column <= (z_max + 1))
+    && /*slice >= (z_min + 1) &&*/ slice <= (z_max + 1))
     {
         // if flowing right
         if(vol_flux_x[THARR3D(0, 0, 0,1,0)] > 0.0)

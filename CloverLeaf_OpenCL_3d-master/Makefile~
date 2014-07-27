@@ -236,7 +236,7 @@ include make.deps
 %.mod %_module.mod %_leaf_module.mod: %.f90 %.o
 	@true
 %.o: %.f90 Makefile
-	$(MPI_COMPILER) $(CFLAGS) -c $< -o $*.o
+	$(MPI_COMPILER) -cpp $(CFLAGS) -c $< -o $*.o
 %.o: %.c Makefile
 	$(C_MPI_COMPILER) $(CFLAGS) -c $< -o $*.o
 
@@ -250,7 +250,7 @@ _kernel_strings.cpp: Makefile $(shell ls kernel_files/*.cl)
 		knl_name=`echo $$i | sed 's/\(\.\/\)\?kernel_files\///g' | sed 's/\.cl//g'`; \
 		echo "extern const std::string src_$$knl_name;" >> $(KERNEL_HDR_FILE); \
 		echo -n "const std::string src_$$knl_name(\"" >> _kernel_strings.cpp; \
-		echo "#include <kernel_files/macros_cl.cl> \\n\\" >> _kernel_strings.cpp;\
+		echo "#include <kernel_files/macros_cl.cl> \\\n\\" >> _kernel_strings.cpp;\
 		cat $$i | sed 's/\\/\\\\/g' | sed 's/\([^\\]*\)$$/\1\\n\\/g' >> _kernel_strings.cpp; \
 		echo "\");" >> _kernel_strings.cpp; \
 	done

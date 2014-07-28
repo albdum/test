@@ -6,3 +6,4 @@ _kernel_strings.cpp
 clover_leaf
 ocl_kernel_hdr.hpp
 clover.out
+*.btr

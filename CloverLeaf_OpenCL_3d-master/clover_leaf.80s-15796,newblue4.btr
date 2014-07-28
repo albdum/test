@@ -1,8 +1,0 @@
-
-clover_leaf:15796 terminated with signal 11 at PC=443346 SP=7fffffffc6d8.  Backtrace:
-./clover_leaf(__clover_module_MOD_clover_get_num_chunks+0x6)[0x443346]
-./clover_leaf(start_+0xaa)[0x477dfa]
-./clover_leaf(initialise_+0x40a)[0x47cfba]
-./clover_leaf(main+0x3e)[0x4aa55e]
-/lib64/libc.so.6(__libc_start_main+0xfd)[0x2aaaad226d1d]
-./clover_leaf[0x421a09]
